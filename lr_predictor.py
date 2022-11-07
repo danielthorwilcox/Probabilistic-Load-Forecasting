@@ -1,4 +1,6 @@
 #linear regression predictor for energy data
+#ToDo: move this to FORECASTING: right now, using the detailed load distribution as features makes the regression perform too well
+#in reality, this should be LR time-series forecasting: taking lagged 'total load actual' data, it should predict the next (n) values
 
 import pandas as pd
 import matplotlib.pyplot as plt
