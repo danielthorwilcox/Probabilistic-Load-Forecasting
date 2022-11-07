@@ -1,4 +1,5 @@
 #moving average predictor for energy data
+#v0.1: Leo
 
 import pandas as pd
 import matplotlib.pyplot as plt
