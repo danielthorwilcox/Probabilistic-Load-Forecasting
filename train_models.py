@@ -22,4 +22,4 @@ def getXypairs(data, train_period, pred_period):
 
 
 X, y = getXypairs(data, 10, 1)
-print(X)
+#print(X)
