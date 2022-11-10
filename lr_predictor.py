@@ -1,6 +1,6 @@
 #-------------------------------------------------------------------------------------------------------------------
 #linear regression predictor for energy data
-#divides data into observation and prediction windows, then uses a linear regression                        to predict the values in the
+#divides data into observation and prediction windows, then uses a linear regression model to predict the values in the
 #prediction window based on the values in the corresponding observation window
 
 import pandas as pd
