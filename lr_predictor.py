@@ -24,7 +24,7 @@ def getXypairs(data, train_period, pred_period):
 
     return X, y
 
-#-----------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------------
 # W_obs: number of old values used for prediction, W_pred: number of future values to predict  
 
 W_obs = 24*20
@@ -50,6 +50,7 @@ print("Linear Regression predictor with MSE: ", mse, ", r2 score: ", r2)
 #print("model coefficients: ", lrmodel.coef_)
 
 #'''
+#plot one of the perdiction windows vs the real values in that window
 plt.plot(y_test[400,:])
 plt.plot(predictions[400,:])
 plt.legend(["true values", "predictions"])
