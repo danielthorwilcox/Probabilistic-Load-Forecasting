@@ -120,7 +120,7 @@ class Optimization:
                  predictions.append(yhat.detach().numpy())
                  values.append(y_test.detach().numpy())
 
-         return predictions, values
+         return np.array(predictions), np.array(values)
 
     def plot_losses(self):
         plt.plot(self.train_losses, label="Training loss")

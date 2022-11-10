@@ -4,9 +4,7 @@ import models
 import pandas as pd
 from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
-
-
-data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
+import matplotlib.pyplot as plt
 
 
 def getXypairs(data, train_period, pred_period):
@@ -24,7 +22,8 @@ def getXypairs(data, train_period, pred_period):
 
 
 train_period = 24  # observation window size
-pred_period = 2  # prediction window size
+pred_period = 8  # prediction window size, should be 24 hours
+data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 X, y, n_observations, n_features = getXypairs(data, train_period=train_period, pred_period=pred_period)
 
 X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
@@ -41,13 +40,14 @@ val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, drop_last
 test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, drop_last=True)
 test_loader_one = DataLoader(test_set, batch_size=1, shuffle=False, drop_last=True)
 
+# Train network
 input_dim = n_features
 output_dim = pred_period
 hidden_dim = 64
 layer_dim = 3
 batch_size = 64
 dropout = 0.2
-n_epochs = 25
+n_epochs = 12
 learning_rate = 1e-3
 weight_decay = 1e-6
 
@@ -67,3 +67,9 @@ opt.train(train_loader, val_loader, batch_size=batch_size, n_epochs=n_epochs, n_
 opt.plot_losses()
 
 predictions, values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_dim)
+
+# Plot single prediction
+plt.plot(values[13, :, :])
+plt.plot(predictions[13, :, :])
+plt.legend(["true values", "predictions"])
+plt.show()

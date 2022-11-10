@@ -1,9 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from functools import reduce
+import os
 
-data = pd.read_csv('demand_generation\energy_dataset.csv')
-weather = pd.read_csv('demand_generation\weather_features.csv')
+cur_dir = os.getcwd()
+data = pd.read_csv('demand_generation/energy_dataset.csv')
+weather = pd.read_csv('demand_generation/weather_features.csv')
 weather = weather.drop_duplicates(subset=['dt_iso', 'city_name'])
 cities = weather['city_name'].unique()
 # print(cities)
