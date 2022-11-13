@@ -7,6 +7,7 @@ from statsmodels.tsa.stattools import  adfuller
 from math import *
 from random import randint
 from sklearn.metrics import mean_squared_error
+from pandas.plotting import autocorrelation_plot
 
 
 def getXypairs(data, train_period, pred_period):
@@ -49,31 +50,44 @@ def get_stationarity(timeseries):
 #--------------------------------------------------------------------------------------------------------------------
 # W_obs: number of old values used for prediction, W_pred: number of future values to predict  
 
-W_obs = 24*4
-W_pred = 24
-n_runs = 1
+W_obs = 24*2
+W_pred = 12
+n_runs = 10
 
 data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 ts = data["total load actual"]
-ts = ts.diff()
+ts_wss = ts.dropna() #find differencing order to make the series WSS
+
+
+#print(ts.head())
+
+#autocorrelation_plot(ts.iloc[:40])
+#plt.show()
 
 X, y = getXypairs(ts,W_obs,W_pred)
 
-MSEs = []
+
+
+
+MSEs = np.zeros(n_runs)
 for i in range(0,n_runs):
     idx = randint(0,len(X))
-    get_stationarity(pd.DataFrame(X[idx]))
-    model = ARIMA(X[idx],order=(1,1,1))
+    #get_stationarity(pd.DataFrame(X[idx]))
+    model = ARIMA(X[idx],order=(24,1,0))
     results = model.fit()
+    #print(results.summary())
     train_predict = results.fittedvalues
     test_predict = results.forecast(steps=W_pred)
     mse = mean_squared_error(test_predict,y[idx])
-    print(mse)
-    MSEs.append(mse)
-    plt.plot(X[idx])
-    plt.plot(train_predict)
-    plt.show()
-    plt.plot(y[idx])
-    plt.plot(test_predict)
-    plt.show()
+    #print(mse)
+    MSEs[i] = mse
+    if(i == 3):
+        fig, ax = plt.subplots(1,2)
+        ax[0].plot(X[idx])
+        ax[0].plot(train_predict)
+        ax[1].plot(y[idx])
+        ax[1].plot(test_predict)
 
+print("averaged MSE: ", MSEs.mean())
+print(MSEs)
+plt.show()

@@ -27,8 +27,8 @@ def getXypairs(data, train_period, pred_period):
 #--------------------------------------------------------------------------------------------------------------------
 # W_obs: number of old values used for prediction, W_pred: number of future values to predict  
 
-W_obs = 24*20
-W_pred = 24*2  
+W_obs = 24*2
+W_pred = 12
 
 load_data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 timeseries = load_data["total load actual"]
