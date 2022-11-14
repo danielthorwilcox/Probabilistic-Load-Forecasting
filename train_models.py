@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 import models
@@ -57,7 +58,7 @@ model_params = {'input_dim': input_dim,
                 'output_dim': output_dim,
                 'dropout_prob': dropout}
 
-model = models.get_model('lstm', model_params)
+model = models.get_model('bayesian_lstm', model_params)
 
 loss_fn = nn.MSELoss(reduction="mean")
 optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -66,10 +67,12 @@ opt = models.Optimization(model=model, loss_fn=loss_fn, optimizer=optimizer)
 opt.train(train_loader, val_loader, batch_size=batch_size, n_epochs=n_epochs, n_features=input_dim)
 opt.plot_losses()
 
-predictions, values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_dim)
+predictions, true_values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_dim)
+
+ic_acc, under_ci_upper, over_ci_lower = models.evaluate_confidence(model, X_test, y_test, samples=25, std_multiplier=3)
 
 # Plot single prediction
-plt.plot(values[13, :, :])
-plt.plot(predictions[13, :, :])
+plt.plot(np.squeeze(true_values[13, :, :]))
+plt.plot(np.squeeze(predictions[13, :, :]))
 plt.legend(["true values", "predictions"])
 plt.show()

@@ -4,11 +4,13 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import torch.optim as optim
+from blitz.modules import BayesianLSTM, BayesianLinear
 
 
 def get_model(model, model_params):
     models = {
         "lstm": LSTMModel,
+        "bayesian_lstm": BayesianLSTMModel,
     }
     return models.get(model.lower())(**model_params)
 
@@ -40,6 +42,42 @@ class LSTMModel(nn.Module):
         # If we don't, we'll backprop all the way to the start even after going through another batch
         # Forward propagation by passing in the input, hidden state, and cell state into the model
         out, (hn, cn) = self.lstm(x, (h0.detach(), c0.detach()))
+
+        # Reshaping the outputs in the shape of (batch_size, seq_length, hidden_size)
+        # so that it can fit into the fully connected layer
+        out = out[:, -1, :]
+
+        # Convert the final state to our desired output shape (batch_size, output_dim)
+        out = self.fc(out)
+
+        return out
+
+class BayesianLSTMModel(nn.Module):
+    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, dropout_prob):
+        super(BayesianLSTMModel, self).__init__()
+
+        # Defining the number of layers and the nodes in each layer
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.layer_dim = layer_dim
+
+        # LSTM layers
+        self.lstm = BayesianLSTM(input_dim, hidden_dim)  # TODO: add more layers
+
+        # Fully connected layer
+        self.fc = BayesianLinear(hidden_dim, output_dim)
+
+    def forward(self, x):
+        # Initializing hidden state for first input with zeros
+        h0 = torch.zeros(self.input_dim, x.size(0), self.hidden_dim).requires_grad_()
+
+        # Initializing cell state for first input with zeros
+        c0 = torch.zeros(self.input_dim, x.size(0), self.hidden_dim).requires_grad_()
+
+        # We need to detach as we are doing truncated backpropagation through time (BPTT)
+        # If we don't, we'll backprop all the way to the start even after going through another batch
+        # Forward propagation by passing in the input, hidden state, and cell state into the model
+        out, (hn, cn) = self.lstm(x)  # , (h0.detach(), c0.detach()))
 
         # Reshaping the outputs in the shape of (batch_size, seq_length, hidden_size)
         # so that it can fit into the fully connected layer
@@ -107,7 +145,7 @@ class Optimization:
                     f"[{epoch}/{n_epochs}] Training loss: {training_loss:.4f}\t Validation loss: {validation_loss:.4f}"
                 )
 
-        torch.save(self.model.state_dict(), model_path)
+#        torch.save(self.model.state_dict(), model_path)
 
     def evaluate(self, test_loader, batch_size=1, n_features=1):
          with torch.no_grad():
@@ -122,6 +160,20 @@ class Optimization:
 
          return np.array(predictions), np.array(values)
 
+    def evaluate_confidence(self, test_loader, batch_size=1, n_features=1):
+        with torch.no_grad():
+            predctions = []
+            values = []
+            for x_test, y_test in test_loader:
+                x_test = x_test.view([batch_size, -1, n_features])
+                self.model.eval()
+                yhat = self.model(x_test)
+                predctions.append(yhat.detach().numpy())
+                values.append(y_test.detach().numpy())
+
+            predctions = np.array(predctions)
+            values = np.array(values)
+
     def plot_losses(self):
         plt.plot(self.train_losses, label="Training loss")
         plt.plot(self.val_losses, label="Validation loss")
@@ -130,3 +182,17 @@ class Optimization:
         plt.show()
         plt.close()
 
+def evaluate_confidence(regressor,
+                        X,
+                        y,
+                        samples=100,
+                        std_multiplier=2):
+    preds = [regressor(X) for i in range(samples)]
+    preds = torch.stack(preds)
+    means = preds.mean(axis=0)
+    stds = preds.std(axis=0)
+    ci_upper = means + (std_multiplier * stds)
+    ci_lower = means - (std_multiplier * stds)
+    ic_acc = (ci_lower <= y) * (ci_upper >= y)
+    ic_acc = ic_acc.float().mean()
+    return ic_acc, (ci_upper >= y).float().mean(), (ci_lower <= y).float().mean()
