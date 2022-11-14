@@ -51,8 +51,9 @@ print("Linear Regression predictor with MSE: ", mse, ", r2 score: ", r2)
 
 #'''
 #plot one of the perdiction windows vs the real values in that window
-plt.plot(y_test[400,:])
-plt.plot(predictions[400,:])
+plt.plot(y_test[1001,:])
+plt.plot(predictions[1001,:])
 plt.legend(["true values", "predictions"])
+plt.title("Example prediction of the Linear Regression model")
 plt.show()
 #'''

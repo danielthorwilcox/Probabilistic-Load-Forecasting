@@ -52,7 +52,8 @@ def get_stationarity(timeseries):
 
 W_obs = 24*2
 W_pred = 12
-n_runs = 10
+n_runs = 100
+n_plots = 2
 
 data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 ts = data["total load actual"]
@@ -64,7 +65,7 @@ ts_wss = ts.dropna() #find differencing order to make the series WSS
 #autocorrelation_plot(ts.iloc[:40])
 #plt.show()
 
-X, y = getXypairs(ts,W_obs,W_pred)
+X, y = getXypairs(ts.dropna(),W_obs,W_pred)
 
 
 
@@ -74,20 +75,28 @@ for i in range(0,n_runs):
     idx = randint(0,len(X))
     #get_stationarity(pd.DataFrame(X[idx]))
     model = ARIMA(X[idx],order=(24,1,0))
-    results = model.fit()
+    results = model.fit(method='burg')
     #print(results.summary())
     train_predict = results.fittedvalues
     test_predict = results.forecast(steps=W_pred)
     mse = mean_squared_error(test_predict,y[idx])
     #print(mse)
     MSEs[i] = mse
-    if(i == 3):
+    if(i%(n_runs/n_plots) == 0):
         fig, ax = plt.subplots(1,2)
         ax[0].plot(X[idx])
         ax[0].plot(train_predict)
         ax[1].plot(y[idx])
         ax[1].plot(test_predict)
+        ax[0].set_title("Training portion")
+        ax[1].set_title("Test portion")
+        fig.suptitle("Example prediction performance for one traing-test pair")
+        ax[0].legend(["actual","predictions"])
+        ax[1].legend(["actual","predictions"])
+        
 
 print("averaged MSE: ", MSEs.mean())
-print(MSEs)
+print("MSE variance: ", MSEs.var())
+print("Max MSE: ", MSEs.max())
+print("Min MSE: ", MSEs.min())
 plt.show()
