@@ -12,6 +12,20 @@ import numpy as np
 
 
 def getXypairs(data, train_period, pred_period):
+
+    # create a dataset of training and prediction windows from a given time series:
+    # start with the first value as the first data point, the train_period-tht value
+    # as the first value as the first prediction point (value to predict from corresponding training window),
+    #  then shif this through the time series:
+    #
+    # _____data(n)______~~pred(n)~~************************** first data-pred pair
+    # *********_____data(n)______~~pred(n)~~***************** n-th data-pred pair
+    # **********_____data(n+1)____~pred(n+1)~**************** (n+1)-th data-pred pair
+    #                               ...
+    # *****************_____data(n+m)____~pred(n+m)~********* (n+m)-th data-pred pair
+    #                               ...
+    # **************************_____data(n+1)____~pred(n+1)~ last data-pred pair
+
     data.drop(columns='time', inplace=True)
     n_observations = len(data)
     window_size = train_period + pred_period
@@ -27,8 +41,8 @@ def getXypairs(data, train_period, pred_period):
 #--------------------------------------------------------------------------------------------------------------------
 # W_obs: number of old values used for prediction, W_pred: number of future values to predict  
 
-W_obs = 24*20
-W_pred = 24*2  
+W_obs = 24*2
+W_pred = 12
 
 load_data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 timeseries = load_data["total load actual"]
@@ -51,8 +65,9 @@ print("Linear Regression predictor with MSE: ", mse, ", r2 score: ", r2)
 
 #'''
 #plot one of the perdiction windows vs the real values in that window
-plt.plot(y_test[400,:])
-plt.plot(predictions[400,:])
+plt.plot(y_test[1001,:])
+plt.plot(predictions[1001,:])
 plt.legend(["true values", "predictions"])
+plt.title("Example prediction of the Linear Regression model")
 plt.show()
 #'''
