@@ -11,6 +11,20 @@ from pandas.plotting import autocorrelation_plot
 
 
 def getXypairs(data, train_period, pred_period):
+
+    # create a dataset of training and prediction windows from a given time series:
+    # start with the first value as the first data point, the train_period-tht value
+    # as the first value as the first prediction point (value to predict from corresponding training window),
+    #  then shif this through the time series:
+    #
+    # _____data(n)______~~pred(n)~~************************** first data-pred pair
+    # *********_____data(n)______~~pred(n)~~***************** n-th data-pred pair
+    # **********_____data(n+1)____~pred(n+1)~**************** (n+1)-th data-pred pair
+    #                               ...
+    # *****************_____data(n+m)____~pred(n+m)~********* (n+m)-th data-pred pair
+    #                               ...
+    # **************************_____data(n+1)____~pred(n+1)~ last data-pred pair
+
     data.drop(columns='time', inplace=True)
     n_observations = len(data)
     window_size = train_period + pred_period
@@ -52,8 +66,8 @@ def get_stationarity(timeseries):
 
 W_obs = 24*2
 W_pred = 12
-n_runs = 100
-n_plots = 2
+n_runs = 100 #number of ARIMA models to fit and evaluate (and average MSEs over)
+n_plots = 2 #number of example plots
 
 data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 ts = data["total load actual"]
@@ -72,17 +86,16 @@ X, y = getXypairs(ts.dropna(),W_obs,W_pred)
 
 MSEs = np.zeros(n_runs)
 for i in range(0,n_runs):
-    idx = randint(0,len(X))
+    idx = randint(0,len(X)) # pick random training-test pair
     #get_stationarity(pd.DataFrame(X[idx]))
-    model = ARIMA(X[idx],order=(24,1,0))
+    model = ARIMA(X[idx],order=(24,1,0)) # train ARIMA(24,1,0) model on selected training-test pair
     results = model.fit(method='burg')
     #print(results.summary())
-    train_predict = results.fittedvalues
-    test_predict = results.forecast(steps=W_pred)
-    mse = mean_squared_error(test_predict,y[idx])
-    #print(mse)
+    train_predict = results.fittedvalues # get trainng predictions
+    test_predict = results.forecast(steps=W_pred) # predict the next W_pred values form trained model
+    mse = mean_squared_error(test_predict,y[idx]) # compute MSE of this specific train-test pair
     MSEs[i] = mse
-    if(i%(n_runs/n_plots) == 0):
+    if(i%(n_runs/n_plots) == 0): # plot the training and test predictions vs the real values
         fig, ax = plt.subplots(1,2)
         ax[0].plot(X[idx])
         ax[0].plot(train_predict)
@@ -94,7 +107,7 @@ for i in range(0,n_runs):
         ax[0].legend(["actual","predictions"])
         ax[1].legend(["actual","predictions"])
         
-
+# print out the overall statistics over the n_runs predictors:
 print("averaged MSE: ", MSEs.mean())
 print("MSE variance: ", MSEs.var())
 print("Max MSE: ", MSEs.max())
