@@ -27,7 +27,7 @@ pred_period = 8  # prediction window size, should be 24 hours
 data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 X, y, n_observations, n_features = getXypairs(data, train_period=train_period, pred_period=pred_period)
 
-X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.01, shuffle=False)
 X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, shuffle=False)
 
 batch_size = 64
@@ -67,12 +67,20 @@ opt = models.Optimization(model=model, loss_fn=loss_fn, optimizer=optimizer)
 opt.train(train_loader, val_loader, batch_size=batch_size, n_epochs=n_epochs, n_features=input_dim)
 opt.plot_losses()
 
-predictions, true_values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_dim)
+predictions, true_values = opt.evaluate_with_ci(test_loader_one, batch_size=1, n_features=input_dim)
 
-ic_acc, under_ci_upper, over_ci_lower = models.evaluate_confidence(model, X_test, y_test, samples=25, std_multiplier=3)
+some_idx = 13
+single_pred = predictions[some_idx, :, :]
+ic_acc, ci_upper, ci_lower = models.get_confidence_intervals(single_pred, 1)
 
 # Plot single prediction
-plt.plot(np.squeeze(true_values[13, :, :]))
-plt.plot(np.squeeze(predictions[13, :, :]))
-plt.legend(["true values", "predictions"])
+plt.plot(np.squeeze(true_values[some_idx, :, :]))
+plt.plot(np.squeeze(ic_acc))
+plt.fill_between(x=np.arange(pred_period),
+                 y1=np.squeeze(ci_upper),
+                 y2=np.squeeze(ci_lower),
+                 facecolor='green',
+                 label="Confidence interval",
+                 alpha=0.5)
+plt.legend(["true values", "predictions", "ci"])
 plt.show()

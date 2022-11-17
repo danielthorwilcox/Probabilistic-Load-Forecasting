@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch.optim as optim
 from blitz.modules import BayesianLSTM, BayesianLinear
+from blitz.utils import variational_estimator
 
 
 def get_model(model, model_params):
@@ -52,6 +53,8 @@ class LSTMModel(nn.Module):
 
         return out
 
+
+@variational_estimator
 class BayesianLSTMModel(nn.Module):
     def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, dropout_prob):
         super(BayesianLSTMModel, self).__init__()
@@ -160,19 +163,18 @@ class Optimization:
 
          return np.array(predictions), np.array(values)
 
-    def evaluate_confidence(self, test_loader, batch_size=1, n_features=1):
+    def evaluate_with_ci(self, test_loader, batch_size=1, n_features=1, n_samples=5):
         with torch.no_grad():
-            predctions = []
+            predictions = []
             values = []
             for x_test, y_test in test_loader:
                 x_test = x_test.view([batch_size, -1, n_features])
                 self.model.eval()
-                yhat = self.model(x_test)
-                predctions.append(yhat.detach().numpy())
+                yhat = [self.model(x_test).detach().numpy() for _ in range(n_samples)]
+                predictions.append(yhat)
                 values.append(y_test.detach().numpy())
 
-            predctions = np.array(predctions)
-            values = np.array(values)
+        return np.array(predictions), np.array(values)
 
     def plot_losses(self):
         plt.plot(self.train_losses, label="Training loss")
@@ -182,17 +184,28 @@ class Optimization:
         plt.show()
         plt.close()
 
-def evaluate_confidence(regressor,
-                        X,
-                        y,
-                        samples=100,
-                        std_multiplier=2):
-    preds = [regressor(X) for i in range(samples)]
-    preds = torch.stack(preds)
-    means = preds.mean(axis=0)
-    stds = preds.std(axis=0)
-    ci_upper = means + (std_multiplier * stds)
-    ci_lower = means - (std_multiplier * stds)
-    ic_acc = (ci_lower <= y) * (ci_upper >= y)
-    ic_acc = ic_acc.float().mean()
-    return ic_acc, (ci_upper >= y).float().mean(), (ci_lower <= y).float().mean()
+
+def get_confidence_intervals(preds_test, ci_multiplier):
+    # global scaler
+
+    preds_test = torch.tensor(preds_test)
+
+    pred_mean = preds_test.mean(dim=0).clone().detach()
+    pred_std = preds_test.std(dim=0).clone().detach()
+
+    # pred_std = torch.tensor(pred_std).clone().detach()
+
+    upper_bound = pred_mean + (pred_std * ci_multiplier)
+    lower_bound = pred_mean - (pred_std * ci_multiplier)
+    # gather unscaled confidence intervals
+
+    pred_mean_unscaled = pred_mean.unsqueeze(1).detach().cpu().numpy()
+    # pred_mean_unscaled = scaler.inverse_transform(pred_mean_final)
+
+    upper_bound_unscaled = upper_bound.unsqueeze(1).detach().cpu().numpy()
+    # upper_bound_unscaled = scaler.inverse_transform(upper_bound_unscaled)
+
+    lower_bound_unscaled = lower_bound.unsqueeze(1).detach().cpu().numpy()
+    # lower_bound_unscaled = scaler.inverse_transform(lower_bound_unscaled)
+
+    return pred_mean_unscaled, upper_bound_unscaled, lower_bound_unscaled
