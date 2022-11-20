@@ -58,7 +58,8 @@ model_params = {'input_dim': input_dim,
                 'output_dim': output_dim,
                 'dropout_prob': dropout}
 
-model = models.get_model('bayesian_lstm', model_params)
+model_name = 'bayesian_lstm'
+model = models.get_model(model_name, model_params)
 
 loss_fn = nn.MSELoss(reduction="mean")
 optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -67,11 +68,11 @@ opt = models.Optimization(model=model, loss_fn=loss_fn, optimizer=optimizer)
 opt.train(train_loader, val_loader, batch_size=batch_size, n_epochs=n_epochs, n_features=input_dim)
 opt.plot_losses()
 
-predictions, true_values = opt.evaluate_with_ci(test_loader_one, batch_size=1, n_features=input_dim)
+predictions, true_values = opt.evaluate(test_loader_one, model_name, batch_size=1, n_features=input_dim)
 
 some_idx = 13
 single_pred = predictions[some_idx, :, :]
-ic_acc, ci_upper, ci_lower = models.get_confidence_intervals(single_pred, 1)
+ic_acc, ci_upper, ci_lower = models.get_confidence_intervals(single_pred, 2)
 
 # Plot single prediction
 plt.plot(np.squeeze(true_values[some_idx, :, :]))

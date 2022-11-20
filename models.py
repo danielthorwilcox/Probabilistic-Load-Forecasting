@@ -65,7 +65,8 @@ class BayesianLSTMModel(nn.Module):
         self.layer_dim = layer_dim
 
         # LSTM layers
-        self.lstm = BayesianLSTM(input_dim, hidden_dim)  # TODO: add more layers
+        self.first_lstm = BayesianLSTM(input_dim, hidden_dim)
+        self.lstms = nn.ModuleList([BayesianLSTM(hidden_dim, hidden_dim) for _ in range(layer_dim-1)])
 
         # Fully connected layer
         self.fc = BayesianLinear(hidden_dim, output_dim)
@@ -80,7 +81,9 @@ class BayesianLSTMModel(nn.Module):
         # We need to detach as we are doing truncated backpropagation through time (BPTT)
         # If we don't, we'll backprop all the way to the start even after going through another batch
         # Forward propagation by passing in the input, hidden state, and cell state into the model
-        out, (hn, cn) = self.lstm(x)  # , (h0.detach(), c0.detach()))
+        out, (hn, cn) = self.first_lstm(x)  # , (h0.detach(), c0.detach()))
+        for lstm in self.lstms:
+            out, (hn, cn) = lstm(out)
 
         # Reshaping the outputs in the shape of (batch_size, seq_length, hidden_size)
         # so that it can fit into the fully connected layer
@@ -150,29 +153,20 @@ class Optimization:
 
 #        torch.save(self.model.state_dict(), model_path)
 
-    def evaluate(self, test_loader, batch_size=1, n_features=1):
-         with torch.no_grad():
-             predictions = []
-             values = []
-             for x_test, y_test in test_loader:
-                 x_test = x_test.view([batch_size, -1, n_features])
-                 self.model.eval()
-                 yhat = self.model(x_test)
-                 predictions.append(yhat.detach().numpy())
-                 values.append(y_test.detach().numpy())
-
-         return np.array(predictions), np.array(values)
-
-    def evaluate_with_ci(self, test_loader, batch_size=1, n_features=1, n_samples=5):
+    def evaluate(self, test_loader, model_name, batch_size=1, n_features=1, n_samples=10):
         with torch.no_grad():
             predictions = []
             values = []
             for x_test, y_test in test_loader:
                 x_test = x_test.view([batch_size, -1, n_features])
                 self.model.eval()
-                yhat = [self.model(x_test).detach().numpy() for _ in range(n_samples)]
-                predictions.append(yhat)
                 values.append(y_test.detach().numpy())
+                if model_name == 'lstm':
+                    yhat = self.model(x_test)
+                    predictions.append(yhat.detach().numpy())
+                elif model_name == 'bayesian_lstm':
+                    yhat = [self.model(x_test).detach().numpy() for _ in range(n_samples)]
+                    predictions.append(yhat)
 
         return np.array(predictions), np.array(values)
 
