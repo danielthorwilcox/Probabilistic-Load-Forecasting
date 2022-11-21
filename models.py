@@ -4,6 +4,9 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import torch.optim as optim
+import pandas as pd
+from os.path import join
+import yaml
 
 
 def get_model(model, model_params):
@@ -102,7 +105,7 @@ class Optimization:
                 validation_loss = np.mean(batch_val_losses)
                 self.val_losses.append(validation_loss)
 
-            if (epoch <= 10) | (epoch % 50 == 0):
+            if (epoch <= 50) | (epoch % 50 == 0):
                 print(
                     f"[{epoch}/{n_epochs}] Training loss: {training_loss:.4f}\t Validation loss: {validation_loss:.4f}"
                 )
@@ -129,4 +132,9 @@ class Optimization:
         plt.title("Losses")
         plt.show()
         plt.close()
+
+    def save_losses(self,filepath):
+        epochs = range(1,len(self.train_losses)+1)
+        df = pd.DataFrame(np.array([epochs,self.train_losses,self.val_losses]).T, columns=["epoch","training loss","validation loss"])
+        df.to_csv(join(filepath,"losses.csv"))
 

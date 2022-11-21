@@ -1,0 +1,10 @@
+parameters:
+  batch_size: 512
+  dropout: 0.2
+  hidden_dim: 5
+  layer_dim: 3
+  learning_rate: 0.006
+  n_epochs: 50
+  pred_period: 24
+  train_period: 164
+  weight_decay: 1.0e-05
