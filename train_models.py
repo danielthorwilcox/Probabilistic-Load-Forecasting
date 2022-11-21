@@ -12,7 +12,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 # define filepath for config file and result data:
 # for a new experiment, place a config file in a folder
 # and set the filepath accordingly
-filepath = "./network1"
+filepath = "./network15"
 
 
 def getXypairs(data, train_period, pred_period):
