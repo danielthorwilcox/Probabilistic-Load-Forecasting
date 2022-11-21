@@ -59,7 +59,7 @@ model_params = {'input_dim': input_dim,
                 'output_dim': output_dim,
                 'dropout_prob': dropout}
 
-model_name = 'bayesian_lstm'
+model_name = 'lstm'
 model = models.get_model(model_name, model_params)
 
 loss_fn = nn.MSELoss(reduction="mean")
@@ -74,20 +74,25 @@ pred_mean = np.mean(predictions, axis=1)
 
 total_test_loss = mean_squared_error(pred_mean.flatten(), true_values.flatten())
 print(f"{total_test_loss=}")
-# TODO: make compatible with basic network
 
 some_idx = 13
 single_pred = predictions[some_idx, :, :]
-single_pred_mean, ci_upper, ci_lower = models.get_confidence_intervals(single_pred, 2)
-
-# Plot single prediction
-plt.plot(np.squeeze(true_values[some_idx, :, :]))
-plt.plot(np.squeeze(single_pred_mean))
-plt.fill_between(x=np.arange(pred_period),
-                 y1=np.squeeze(ci_upper),
-                 y2=np.squeeze(ci_lower),
-                 facecolor='green',
-                 label="Confidence interval",
-                 alpha=0.5)
-plt.legend(["true values", "predictions", "ci"])
-plt.show()
+if model_name == 'lstm':
+    # Plot single prediction
+    plt.plot(np.squeeze(true_values[some_idx, :, :]))
+    plt.plot(np.squeeze(single_pred))
+    plt.legend(["true values", "predictions"])
+    plt.show()
+elif model_name == 'bayesian_lstm':
+    single_pred, ci_upper, ci_lower = models.get_confidence_intervals(single_pred, 2)
+    # Plot single prediction
+    plt.plot(np.squeeze(true_values[some_idx, :, :]))
+    plt.plot(np.squeeze(single_pred))
+    plt.fill_between(x=np.arange(pred_period),
+                     y1=np.squeeze(ci_upper),
+                     y2=np.squeeze(ci_lower),
+                     facecolor='green',
+                     label="Confidence interval",
+                     alpha=0.5)
+    plt.legend(["true values", "predictions", "ci"])
+    plt.show()
