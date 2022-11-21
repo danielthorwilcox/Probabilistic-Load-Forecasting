@@ -6,6 +6,7 @@ import pandas as pd
 from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
 import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
 
 
 def getXypairs(data, train_period, pred_period):
@@ -22,8 +23,8 @@ def getXypairs(data, train_period, pred_period):
     return X, y, n_observations, n_features
 
 
-train_period = 24  # observation window size
-pred_period = 8  # prediction window size, should be 24 hours
+train_period = 36  # observation window size
+pred_period = 12  # prediction window size, should be 24 hours
 data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 X, y, n_observations, n_features = getXypairs(data, train_period=train_period, pred_period=pred_period)
 
@@ -69,14 +70,19 @@ opt.train(train_loader, val_loader, batch_size=batch_size, n_epochs=n_epochs, n_
 opt.plot_losses()
 
 predictions, true_values = opt.evaluate(test_loader_one, model_name, batch_size=1, n_features=input_dim)
+pred_mean = np.mean(predictions, axis=1)
+
+total_test_loss = mean_squared_error(pred_mean.flatten(), true_values.flatten())
+print(f"{total_test_loss=}")
+# TODO: make compatible with basic network
 
 some_idx = 13
 single_pred = predictions[some_idx, :, :]
-ic_acc, ci_upper, ci_lower = models.get_confidence_intervals(single_pred, 2)
+single_pred_mean, ci_upper, ci_lower = models.get_confidence_intervals(single_pred, 2)
 
 # Plot single prediction
 plt.plot(np.squeeze(true_values[some_idx, :, :]))
-plt.plot(np.squeeze(ic_acc))
+plt.plot(np.squeeze(single_pred_mean))
 plt.fill_between(x=np.arange(pred_period),
                  y1=np.squeeze(ci_upper),
                  y2=np.squeeze(ci_lower),
