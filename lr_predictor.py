@@ -24,7 +24,11 @@ def getXypairs(data, train_period, pred_period):
     #                               ...
     # *****************_____data(n+m)____~pred(n+m)~********* (n+m)-th data-pred pair
     #                               ...
-    # ***************************_____data(-1)____~pred(-1)~~ last data-pred pair
+<<<<<<< HEAD
+    # ***************************_____data(-1)____~pred(n+1)~ last data-pred pair
+=======
+    # **************************_____data(n+1)____~pred(n+1)~ last data-pred pair
+>>>>>>> 589500c23f433b112152336cdd27dc04ce9c8a77
 
     data.drop(columns='time', inplace=True)
     n_observations = len(data)
@@ -41,8 +45,13 @@ def getXypairs(data, train_period, pred_period):
 #--------------------------------------------------------------------------------------------------------------------
 # W_obs: number of old values used for prediction, W_pred: number of future values to predict  
 
-W_obs = 164
-W_pred = 24
+<<<<<<< HEAD
+W_obs = 24*2
+W_pred = 12
+=======
+W_obs = 24*2
+W_pred = 12
+>>>>>>> 589500c23f433b112152336cdd27dc04ce9c8a77
 
 load_data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 timeseries = load_data["total load actual"]
