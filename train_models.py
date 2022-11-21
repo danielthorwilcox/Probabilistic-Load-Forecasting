@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 import models
@@ -43,7 +44,7 @@ pred_period = params["pred_period"]  # prediction window size, should be 24 hour
 data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 X, y, n_observations, n_features = getXypairs(data, train_period=train_period, pred_period=pred_period)
 
-X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.01, shuffle=False)
 X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, shuffle=False)
 
 batch_size = params["batch_size"]
@@ -73,7 +74,8 @@ model_params = {'input_dim': input_dim,
                 'output_dim': output_dim,
                 'dropout_prob': dropout}
 
-model = models.get_model('lstm', model_params)
+model_name = 'lstm'
+model = models.get_model(model_name, model_params)
 
 loss_fn = nn.MSELoss(reduction="mean")
 optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -84,10 +86,11 @@ opt.plot_losses()
 
 # save some metrics to disc
 opt.save_losses(filepath=filepath)
-predictions, values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_dim)
-mse = mean_squared_error(predictions.flatten(), values.flatten())
-mae = mean_absolute_error(predictions.flatten(),values.flatten())
-r2 = r2_score(predictions.flatten(),values.flatten())
+predictions, true_values = opt.evaluate(test_loader_one, model_name, batch_size=1, n_features=input_dim)
+predictions_mean = np.mean(predictions, axis=1)
+mse = mean_squared_error(predictions_mean.flatten(), true_values.flatten())
+mae = mean_absolute_error(predictions_mean.flatten(), true_values.flatten())
+r2 = r2_score(predictions_mean.flatten(), true_values.flatten())
 with open(join(filepath,"test_loss.txt"),'w') as f:
     f.write("MSE: ")
     f.write(str(mse))
@@ -96,8 +99,25 @@ with open(join(filepath,"test_loss.txt"),'w') as f:
     f.write("\nr2 score: ")
     f.write(str(r2))
 
-# Plot single prediction
-plt.plot(values[13, :, :])
-plt.plot(predictions[13, :, :])
-plt.legend(["true values", "predictions"])
-plt.show()
+some_idx = 13
+single_pred = predictions[some_idx, :, :]
+
+if model_name == 'lstm':
+    # Plot single prediction
+    plt.plot(np.squeeze(true_values[some_idx, :, :]))
+    plt.plot(np.squeeze(single_pred))
+    plt.legend(["true values", "predictions"])
+    plt.show()
+elif model_name == 'bayesian_lstm':
+    single_pred, ci_upper, ci_lower = models.get_confidence_intervals(single_pred, 2)
+    # Plot single prediction
+    plt.plot(np.squeeze(true_values[some_idx, :, :]))
+    plt.plot(np.squeeze(single_pred))
+    plt.fill_between(x=np.arange(pred_period),
+                     y1=np.squeeze(ci_upper),
+                     y2=np.squeeze(ci_lower),
+                     facecolor='green',
+                     label="Confidence interval",
+                     alpha=0.5)
+    plt.legend(["true values", "predictions", "ci"])
+    plt.show()
