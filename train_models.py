@@ -13,7 +13,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 # define filepath for config file and result data:
 # for a new experiment, place a config file in a folder
 # and set the filepath accordingly
-filepath = "./network15"
+filepath = "./results/network26"
 
 
 def getXypairs(data, train_period, pred_period):
@@ -44,7 +44,7 @@ pred_period = params["pred_period"]  # prediction window size, should be 24 hour
 data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 X, y, n_observations, n_features = getXypairs(data, train_period=train_period, pred_period=pred_period)
 
-X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.01, shuffle=False)
+X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.01, shuffle=True)
 X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, shuffle=False)
 
 batch_size = params["batch_size"]
