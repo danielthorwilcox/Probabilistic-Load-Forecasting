@@ -1,6 +1,6 @@
 import torch
 from sklearn.model_selection import train_test_split
-import models
+import fl_models
 import pandas as pd
 from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
@@ -28,6 +28,7 @@ X, y, n_observations, n_features = getXypairs(data, train_period=train_period, p
 
 X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, shuffle=False)
+print(X_train)
 
 batch_size = 64
 
@@ -47,7 +48,7 @@ hidden_dim = 64
 layer_dim = 3
 batch_size = 64
 dropout = 0.2
-n_epochs = 12
+n_epochs = 1
 learning_rate = 1e-3
 weight_decay = 1e-6
 
@@ -67,9 +68,12 @@ opt.train(train_loader, val_loader, batch_size=batch_size, n_epochs=n_epochs, n_
 opt.plot_losses()
 
 predictions, values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_dim)
+print(predictions[13, :, :])
 
 # Plot single prediction
-plt.plot(values[13, :, :])
-plt.plot(predictions[13, :, :])
+# plt.plot(values[13, :, :])
+# plt.plot(predictions[13, :, :])
+plt.plot(values)
+plt.plot(predictions[:][0])
 plt.legend(["true values", "predictions"])
 plt.show()
