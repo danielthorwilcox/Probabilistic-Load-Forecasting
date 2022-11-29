@@ -9,6 +9,7 @@ import pandas as pd
 from torchsummary import summary
 from torch import nn, optim
 from collections import OrderedDict
+import pickle
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -121,7 +122,7 @@ def main():
     ## FL settings
     num_clients = 3
     epochs_per_client = 2
-    learning_rate = 0.001
+    learning_rate = 0.006
     batch_size = 64
     rounds = 2
     datasets = []
@@ -144,21 +145,25 @@ def main():
         global_model.load_state_dict(new_parameters) ## loads the new parameters into the global model
 
 
-    train_period = 24
-    pred_period = 8
+    train_period = 24*7
+    pred_period = 24
     train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(train_period, pred_period, full_dataset)
     input_dim = n_features
     loss_fn = nn.MSELoss(reduction="mean")
     optimizer = optim.Adam(global_model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     opt = fl_models.Optimization(model=global_model, loss_fn=loss_fn, optimizer=optimizer)
     predictions, values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_dim)
+    with open('predictions.pickle', 'wb') as handle:
+        pickle.dump(predictions, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('values.pickle', 'wb') as handle:
+        pickle.dump(values, handle, protocol=pickle.HIGHEST_PROTOCOL)
     # Plot single prediction
-    plt.plot(values[13, :, :])
-    plt.plot(predictions[13, :, :])
-    # plt.plot(values)
-    # plt.plot(predictions[:][0])
-    plt.legend(["true values", "predictions"])
-    plt.show()
+    # plt.plot(values[13, :, :])
+    # plt.plot(predictions[13, :, :])
+    # # plt.plot(values)
+    # # plt.plot(predictions[:][0])
+    # plt.legend(["true values", "predictions"])
+    # plt.show()
 
 
 
