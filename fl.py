@@ -62,8 +62,8 @@ def create_model(dataset):
     ## Create the network model
     ##===========================================
     ## Network parameters
-    train_period = 24  # observation window size
-    pred_period = 8  # prediction window size, should be 24 hours
+    train_period = 168  # observation window size
+    pred_period = 24  # prediction window size, should be 24 hours
     train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(train_period, pred_period, dataset)
     input_dim = n_features
     output_dim = pred_period
@@ -72,7 +72,7 @@ def create_model(dataset):
     batch_size = 64
     dropout = 0.2
     n_epochs = 2
-    learning_rate = 1e-3
+    learning_rate = 0.006
     weight_decay = 1e-6
     model_params = {'input_dim': input_dim,
                     'hidden_dim': hidden_dim,
@@ -87,7 +87,7 @@ class Client:
     ##===========================================
     ## The different clients feeding parameters to the global model
     ##===========================================
-    def __init__(self, client_id, dataset, epochs_per_client, learning_rate, batch_size, train_period = 24, pred_period = 8):
+    def __init__(self, client_id, dataset, epochs_per_client, learning_rate, batch_size, train_period = 168, pred_period = 24):
         self.client_id = client_id
         self.dataset = dataset   
         self.epochs = epochs_per_client 
@@ -121,10 +121,10 @@ def main():
 
     ## FL settings
     num_clients = 3
-    epochs_per_client = 2
+    epochs_per_client = 10
     learning_rate = 0.006
     batch_size = 64
-    rounds = 2
+    rounds = 3
     datasets = []
     for i in range(num_clients):
         datasets.append(full_dataset.copy()[int((i*full_dataset.shape[0])/num_clients) : int(((i+1)*full_dataset.shape[0])/num_clients)])
@@ -145,7 +145,7 @@ def main():
         global_model.load_state_dict(new_parameters) ## loads the new parameters into the global model
 
 
-    train_period = 24*7
+    train_period = 168
     pred_period = 24
     train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(train_period, pred_period, full_dataset)
     input_dim = n_features
