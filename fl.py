@@ -18,7 +18,8 @@ def to_device(data, device):
     return data.to(device, non_blocking=True)
 
 def getXypairs(data, train_period, pred_period):
-    data.drop(columns='time', inplace=True)
+    if 'time' in data:
+        data.drop(columns='time', inplace=True)
     (n_observations, n_features) = data.shape # number of timestamps
     window_size = train_period + pred_period
     X = torch.zeros([n_observations - window_size, train_period, n_features])
@@ -30,13 +31,14 @@ def getXypairs(data, train_period, pred_period):
 
     return X, y, n_observations, n_features
 
-def load_data(trainperiod, predperiod):
+def load_data(trainperiod, predperiod, dataset):
     ##===========================================
     ## Loads the dataset and devides up the features
     ##===========================================
     train_period = trainperiod  # observation window size
     pred_period = predperiod  # prediction window size, should be 24 hours
-    data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
+    # data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
+    data = dataset
     X, y, n_observations, n_features = getXypairs(data, train_period=train_period, pred_period=pred_period)
 
     X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
@@ -54,14 +56,14 @@ def load_data(trainperiod, predperiod):
     test_loader_one = DataLoader(test_set, batch_size=1, shuffle=False, drop_last=True)
     return train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations
 
-def create_model():
+def create_model(dataset):
     ##===========================================
     ## Create the network model
     ##===========================================
     ## Network parameters
     train_period = 24  # observation window size
     pred_period = 8  # prediction window size, should be 24 hours
-    train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(train_period, pred_period)
+    train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(train_period, pred_period, dataset)
     input_dim = n_features
     output_dim = pred_period
     hidden_dim = 64
@@ -84,20 +86,20 @@ class Client:
     ##===========================================
     ## The different clients feeding parameters to the global model
     ##===========================================
-    def __init__(self, client_id, epochs_per_client, learning_rate, batch_size, train_period = 24, pred_period = 8):
+    def __init__(self, client_id, dataset, epochs_per_client, learning_rate, batch_size, train_period = 24, pred_period = 8):
         self.client_id = client_id
-        # self.dataset = dataset   
+        self.dataset = dataset   
         self.epochs = epochs_per_client 
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.weight_decay = 1e-6
         self.train_period = train_period
         self.pred_period = pred_period
-        self.train_loader, self.val_loader, self.test_loader, self.test_loader_one, self.n_features, self.n_observations = load_data(self.train_period, self.pred_period)
+        self.train_loader, self.val_loader, self.test_loader, self.test_loader_one, self.n_features, self.n_observations = load_data(self.train_period, self.pred_period, self.dataset)
 
     def train(self, global_parameters):
         ## Train the client model with the parameters from the global network
-        model = to_device(create_model(), device) # creates the model
+        model = to_device(create_model(self.dataset), device) # creates the model
         model.load_state_dict(global_parameters) # loads the parameters from the global network
         # model.apply_parameters(parameters_dict)
         print(self.client_id)
@@ -113,10 +115,8 @@ class Client:
 
 
 def main():
-    # Network parameters
-    global_model = create_model()
-    global_parameters = global_model.state_dict()
-    # print(global_model.state_dict().items())
+    full_dataset = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
+    # print(full_dataset)
 
     ## FL settings
     num_clients = 3
@@ -124,9 +124,16 @@ def main():
     learning_rate = 0.001
     batch_size = 64
     rounds = 2
+    datasets = []
+    for i in range(num_clients):
+        datasets.append(full_dataset.copy()[int((i*full_dataset.shape[0])/num_clients) : int(((i+1)*full_dataset.shape[0])/num_clients)])
+    # print(datasets)
+    clients = [Client('client_' + str(i), datasets[i], epochs_per_client, learning_rate, batch_size) for i in range(num_clients)] ## creates the clients
+    #Network parameters
+    global_model = create_model(full_dataset)
+    global_parameters = global_model.state_dict()
     global_model.to(device)
-    # clients = [Client('name', epochs_per_client, learning_rate, batch_size)]
-    clients = [Client('client_' + str(i), epochs_per_client, learning_rate, batch_size) for i in range(num_clients)] ## creates the clients
+    weight_decay = 1e-6
     for i in range(rounds):
         print('Round: {}'.format(i+1))
         current_parameters = global_model.get_parameters() # takes the parameters from the original global model
@@ -135,6 +142,23 @@ def main():
             client_parameters = client.train(current_parameters) ## training the client models
             new_parameters = OrderedDict([(key, new_parameters[key] + (client_parameters[key] / num_clients)) for key, values in new_parameters.items()]) ## adding the client models parameters to the new parameters that are going to be sent to the global model
         global_model.load_state_dict(new_parameters) ## loads the new parameters into the global model
+
+
+    train_period = 24
+    pred_period = 8
+    train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(train_period, pred_period, full_dataset)
+    input_dim = n_features
+    loss_fn = nn.MSELoss(reduction="mean")
+    optimizer = optim.Adam(global_model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    opt = fl_models.Optimization(model=global_model, loss_fn=loss_fn, optimizer=optimizer)
+    predictions, values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_dim)
+    # Plot single prediction
+    plt.plot(values[13, :, :])
+    plt.plot(predictions[13, :, :])
+    # plt.plot(values)
+    # plt.plot(predictions[:][0])
+    plt.legend(["true values", "predictions"])
+    plt.show()
 
 
 
