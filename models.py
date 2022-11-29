@@ -3,7 +3,6 @@ from torch import nn
 from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
-import torch.optim as optim
 import pandas as pd
 from os.path import join
 from blitz.modules import BayesianLSTM, BayesianLinear
@@ -19,7 +18,7 @@ def get_model(model, model_params):
 
 
 class LSTMModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, dropout_prob):
+    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, n_fc_layers=1, dropout_prob=0):
         super(LSTMModel, self).__init__()
 
         # Defining the number of layers and the nodes in each layer
@@ -32,7 +31,8 @@ class LSTMModel(nn.Module):
         )
 
         # Fully connected layer
-        self.fc = nn.Linear(hidden_dim, output_dim)
+        self.fc = nn.ModuleList([nn.Linear(hidden_dim, hidden_dim) for _ in range(n_fc_layers-1)])
+        self.out_layer = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
         # Initializing hidden state for first input with zeros
@@ -51,14 +51,16 @@ class LSTMModel(nn.Module):
         out = out[:, -1, :]
 
         # Convert the final state to our desired output shape (batch_size, output_dim)
-        out = self.fc(out)
+        for hidden_layer in self.fc:
+            out = hidden_layer(out)
+        out = self.out_layer(out)
 
         return out
 
 
 @variational_estimator
 class BayesianLSTMModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, dropout_prob):
+    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, n_fc_layers, dropout_prob=0):
         super(BayesianLSTMModel, self).__init__()
 
         # Defining the number of layers and the nodes in each layer
@@ -71,7 +73,8 @@ class BayesianLSTMModel(nn.Module):
         self.lstms = nn.ModuleList([BayesianLSTM(hidden_dim, hidden_dim) for _ in range(layer_dim-1)])
 
         # Fully connected layer
-        self.fc = BayesianLinear(hidden_dim, output_dim)
+        self.fc = nn.ModuleList([BayesianLinear(hidden_dim, hidden_dim) for _ in range(n_fc_layers-1)])
+        self.out_layer = BayesianLinear(hidden_dim, output_dim)
 
     def forward(self, x):
         # Initializing hidden state for first input with zeros
@@ -92,7 +95,9 @@ class BayesianLSTMModel(nn.Module):
         out = out[:, -1, :]
 
         # Convert the final state to our desired output shape (batch_size, output_dim)
-        out = self.fc(out)
+        for hidden_layer in self.fc:
+            out = hidden_layer(out)
+        out = self.out_layer(out)
 
         return out
 

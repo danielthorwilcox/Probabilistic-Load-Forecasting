@@ -6,45 +6,23 @@ import pandas as pd
 from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
 import matplotlib.pyplot as plt
-import yaml
 from os.path import join
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import Utils
 
 # define filepath for config file and result data:
 # for a new experiment, place a config file in a folder
 # and set the filepath accordingly
-filepath = "./network15"
+filepath = "./network25"
 
-
-def getXypairs(data, train_period, pred_period):
-    data.drop(columns='time', inplace=True)
-    (n_observations, n_features) = data.shape # number of timestamps
-    window_size = train_period + pred_period
-    X = torch.zeros([n_observations - window_size, train_period, n_features])
-    y = torch.zeros([n_observations - window_size, pred_period])
-
-    for idx, x in enumerate(X):
-        X[idx, :, :] = torch.tensor(data.iloc[idx:idx + train_period, :].to_numpy())
-        y[idx, :] = torch.tensor(data['total load actual'].iloc[idx + train_period:idx + window_size].to_numpy())
-
-    return X, y, n_observations, n_features
-
-
-# get model parameters from config file
-with open(join(filepath,"config.yaml"),'r') as f:
-            try:
-                config = yaml.safe_load(f)
-            except yaml.YAMLError as exc:
-                print(exc) 
-
-params = config["parameters"]
+params = Utils.get_model_params(filepath)
 
 train_period = params["train_period"]  # observation window size
 pred_period = params["pred_period"]  # prediction window size, should be 24 hours
 data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
-X, y, n_observations, n_features = getXypairs(data, train_period=train_period, pred_period=pred_period)
+X, y, n_observations, n_features = Utils.getXypairs(data, train_period=train_period, pred_period=pred_period)
 
-X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.01, shuffle=False)
+X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.05, shuffle=False)
 X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, shuffle=False)
 
 batch_size = params["batch_size"]
@@ -63,6 +41,7 @@ input_dim = n_features
 output_dim = pred_period
 hidden_dim = params["hidden_dim"]
 layer_dim = params["layer_dim"]
+n_fc_layers = params["n_fc_layers"]
 dropout = params["dropout"]
 n_epochs = params["n_epochs"]
 learning_rate = params["learning_rate"]
@@ -72,6 +51,7 @@ model_params = {'input_dim': input_dim,
                 'hidden_dim': hidden_dim,
                 'layer_dim': layer_dim,
                 'output_dim': output_dim,
+                'n_fc_layers': n_fc_layers,
                 'dropout_prob': dropout}
 
 model_name = 'lstm'
@@ -86,12 +66,14 @@ opt.plot_losses()
 
 # save some metrics to disc
 opt.save_losses(filepath=filepath)
+torch.save(model, f"models/some_model")
+
 predictions, true_values = opt.evaluate(test_loader_one, model_name, batch_size=1, n_features=input_dim)
-predictions_mean = np.mean(predictions, axis=1)
+predictions_mean = np.mean(predictions, axis=1)  # mean of the bayesian outputs, if non-bayesian it has no effect
 mse = mean_squared_error(predictions_mean.flatten(), true_values.flatten())
 mae = mean_absolute_error(predictions_mean.flatten(), true_values.flatten())
 r2 = r2_score(predictions_mean.flatten(), true_values.flatten())
-with open(join(filepath,"test_loss.txt"),'w') as f:
+with open(join(filepath,"test_loss.txt"), 'w') as f:
     f.write("MSE: ")
     f.write(str(mse))
     f.write("\nMAE: ")
