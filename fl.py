@@ -118,6 +118,28 @@ class Client:
 def main():
     full_dataset = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
     # print(full_dataset)
+    client_parameters = {
+        'train_period' : 168,
+        'pred_period' : 24,
+        'output_dim' : 24,
+        'input_dim' : 1,
+        'hidden_dim' : 64,
+        'layer_dim' : 3,
+        'dropout' : 0.2,
+        'learning_rate' : 0.006,
+        'weight_decay' : 1e-6
+    }
+    global_parameters = {
+        'train_period' : 168,
+        'pred_period' : 24,
+        'output_dim' : 24,
+        'input_dim' : 1,
+        'hidden_dim' : 64,
+        'layer_dim' : 3,
+        'dropout' : 0.2,
+        'learning_rate' : 0.006,
+        'weight_decay' : 1e-6
+    }
 
     ## FL settings
     num_clients = 3
@@ -157,6 +179,8 @@ def main():
         pickle.dump(predictions, handle, protocol=pickle.HIGHEST_PROTOCOL)
     with open('values.pickle', 'wb') as handle:
         pickle.dump(values, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    ## använd inte detta
     # Plot single prediction
     # plt.plot(values[13, :, :])
     # plt.plot(predictions[13, :, :])
