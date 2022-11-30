@@ -45,7 +45,7 @@ def load_data(trainperiod, predperiod, dataset):
     X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
     X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, shuffle=False)
 
-    batch_size = 64
+    batch_size = 128
 
     train_set = TensorDataset(X_train, y_train)
     val_set = TensorDataset(X_val, y_val)
@@ -69,7 +69,7 @@ def create_model(dataset):
     output_dim = pred_period
     hidden_dim = 64
     layer_dim = 3
-    batch_size = 64
+    batch_size = 128
     dropout = 0.2
     n_epochs = 2
     learning_rate = 0.006
@@ -123,7 +123,7 @@ def main():
     num_clients = 3
     epochs_per_client = 10
     learning_rate = 0.006
-    batch_size = 64
+    batch_size = 128
     rounds = 3
     datasets = []
     for i in range(num_clients):
