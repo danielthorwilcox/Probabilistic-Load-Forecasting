@@ -8,6 +8,7 @@ with open('predictions.pickle', 'rb') as handle:
 with open('values.pickle', 'rb') as handle:
     values = pickle.load(handle)
 
+
 predictions_mean = np.mean(predictions, axis=1)
 mse = mean_squared_error(predictions_mean.flatten(), values.flatten())
 # print(predictions.shape)
@@ -19,4 +20,3 @@ print(mse)
 plt.plot(predictions[130,:])
 plt.plot(values[130,:])
 plt.show()
-# plt.show()
