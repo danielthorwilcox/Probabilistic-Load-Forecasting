@@ -12,6 +12,7 @@ from torch import nn, optim
 from collections import OrderedDict
 import pickle
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import time
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -58,7 +59,7 @@ def load_data(parameters, dataset):
     test_loader_one = DataLoader(test_set, batch_size=1, shuffle=False, drop_last=True)
     return train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations
 
-def create_model(dataset, parameters):
+def create_model(dataset, parameters, type_of_model):
     ##===========================================
     ## Create the network model
     ##===========================================
@@ -71,7 +72,9 @@ def create_model(dataset, parameters):
                     'layer_dim': parameters['layer_dim'],
                     'output_dim': output_dim,
                     'dropout_prob': parameters['dropout']}
-    model = fl_models.get_model('lstm', model_params)
+    if type_of_model == 'bayesian_lstm':
+        model_params['n_fc_layers'] = parameters['n_fc_layers']
+    model = fl_models.get_model(type_of_model, model_params)
     return model
 
 
@@ -79,11 +82,12 @@ class Client:
     ##===========================================
     ## The different clients feeding parameters to the global model
     ##===========================================
-    def __init__(self, client_id, dataset, epochs_per_client, client_parameters):
+    def __init__(self, client_id, dataset, epochs_per_client, client_parameters, type_of_model):
         self.parameters = client_parameters
         self.client_id = client_id
         self.dataset = dataset   
         self.epochs = epochs_per_client 
+        self.type_of_model = type_of_model
         self.learning_rate = self.parameters['learning_rate']
         self.batch_size = self.parameters['batch_size']
         self.weight_decay = self.parameters['weight_decay']
@@ -93,7 +97,7 @@ class Client:
 
     def train(self, global_parameters):
         ## Train the client model with the parameters from the global network
-        model = to_device(create_model(self.dataset, self.parameters), device) # creates the model
+        model = to_device(create_model(self.dataset, self.parameters, self.type_of_model), device) # creates the model
         model.load_state_dict(global_parameters) # loads the parameters from the global network
         print(self.client_id)
         loss_fn = nn.MSELoss(reduction="mean")
@@ -106,7 +110,9 @@ class Client:
 
 
 def main():
+    start = time.time()
     full_dataset = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
+    type_of_model = 'lstm' # 'bayesian_lstm' or 'lstm'
     ##=========================================================================
     # Parameters for the clients/agents
     client_parameters = {
@@ -124,7 +130,7 @@ def main():
     # Settings for the global network
     global_parameters = {
         'train_period' : 168,
-        'pred_period' : 24,
+        'pred_period' : 24,   #keep this the same for both client and global
         'hidden_dim' : 64,
         'layer_dim' : 3,
         'dropout' : 0.2,
@@ -132,23 +138,28 @@ def main():
         'weight_decay' : 1e-6,
         'batch_size' : 256 # keep this the same for both client and global
     }
+    if type_of_model == 'bayesian_lstm':
+        client_parameters['n_fc_layers'] = 1
+        global_parameters['n_fc_layers'] = 1
     train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(global_parameters, full_dataset)
     input_dim = n_features
     ## FL settings
-    num_clients = 5
-    epochs_per_client = 5
-    rounds = 5
+    num_clients = 3
+    epochs_per_client = 1
+    rounds = 1
+
+    ## Settings above this line are to be changed
     ##==================================================================
     # Splitting the dataset for the clients
     datasets = []
     for i in range(num_clients):
         datasets.append(full_dataset.copy()[int((i*full_dataset.shape[0])/num_clients) : int(((i+1)*full_dataset.shape[0])/num_clients)])
-    clients = [Client('client_' + str(i), datasets[i], epochs_per_client, client_parameters) for i in range(num_clients)] ## creates the clients
+    clients = [Client('client_' + str(i), datasets[i], epochs_per_client, client_parameters, type_of_model) for i in range(num_clients)] ## creates the clients
     # ##==================================================================
 
     # ##==================================================================
     # # Creating the global network
-    global_model = create_model(full_dataset, global_parameters)
+    global_model = create_model(full_dataset, global_parameters, type_of_model)
     global_model.to(device)
 
     ##====================================================================
@@ -161,6 +172,8 @@ def main():
             client_parameters = client.train(current_parameters) ## training the client models
             new_parameters = OrderedDict([(key, new_parameters[key] + (client_parameters[key] / num_clients)) for key, values in new_parameters.items()]) ## adding the client models parameters to the new parameters that are going to be sent to the global model
         global_model.load_state_dict(new_parameters) ## loads the new parameters into the global model
+    midtime = time.time()
+    print('Time for training: '+ str(midtime-start))
 
 
     ##====================================================================
@@ -168,26 +181,58 @@ def main():
     loss_fn = nn.MSELoss(reduction="mean")
     optimizer = optim.Adam(global_model.parameters(), global_parameters['learning_rate'], weight_decay=global_parameters['weight_decay'])
     opt = fl_models.Optimization(model=global_model, loss_fn=loss_fn, optimizer=optimizer)
-    predictions, values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_dim)
+    predictions, true_values = opt.evaluate(test_loader_one, type_of_model, batch_size=1, n_features=input_dim)
     predictions_mean = np.mean(predictions, axis=1)
-    mse = mean_squared_error(predictions_mean.flatten(), values.flatten())
+    mse = mean_squared_error(predictions_mean.flatten(), true_values.flatten())
+    mae = mean_absolute_error(predictions_mean.flatten(), true_values.flatten())
+    r2 = r2_score(predictions_mean.flatten(), true_values.flatten())
     ## =============================================
     ## Save values to a file
-    # with open('predictions.pickle', 'wb') as handle:
+    # with open('bayseian_predictions.pickle', 'wb') as handle:
     #     pickle.dump(predictions, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    # with open('values.pickle', 'wb') as handle:
-    #     pickle.dump(values, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # with open('bayesian_values.pickle', 'wb') as handle:
+    #     pickle.dump(true_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
     ## ===================================================================
+    end = time.time()
+    print('Time for evaluate: '+ str(end-midtime))
+    print('Total time running: '+ str(end-start))
 
     ## ===================================================================
     # Plotting values and predictions
-    predictions = predictions.reshape(predictions.shape[0], predictions.shape[2])
-    values = values.reshape(values.shape[0], values.shape[2])
-    print(mse)
-    plt.plot(values[130,:])
-    plt.plot(predictions[130,:])
-    plt.legend(["true values", "predictions"])
-    plt.show()
+    # predictions = predictions.reshape(predictions.shape[0], predictions.shape[2])
+    # values = values.reshape(values.shape[0], values.shape[2])
+    # print(mse)
+    # plt.plot(values[130,:])
+    # plt.plot(predictions[130,:])
+    # plt.legend(["true values", "predictions"])
+    # plt.show()
+
+
+
+    ##===============================
+    pred_period = global_parameters['pred_period']
+    some_idx = 13
+    single_pred = predictions[some_idx, :, :]
+
+    if type_of_model == 'lstm':
+        # Plot single prediction
+        plt.plot(np.squeeze(true_values[some_idx, :, :]))
+        plt.plot(np.squeeze(single_pred))
+        plt.legend(["true values", "predictions"])
+        plt.show()
+    elif type_of_model == 'bayesian_lstm':
+        single_pred, ci_upper, ci_lower = fl_models.get_confidence_intervals(single_pred, 2)
+        # Plot single prediction
+        plt.plot(np.squeeze(true_values[some_idx, :, :]))
+        plt.plot(np.squeeze(single_pred))
+        plt.fill_between(x=np.arange(pred_period),
+                        y1=np.squeeze(ci_upper),
+                        y2=np.squeeze(ci_lower),
+                        facecolor='green',
+                        label="Confidence interval",
+                        alpha=0.5)
+        plt.legend(["true values", "predictions", "ci"])
+        plt.show()
 
 
 
