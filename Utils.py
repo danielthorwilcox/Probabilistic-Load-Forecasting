@@ -7,6 +7,7 @@ from os.path import join
 
 def getXypairs(data, train_period, pred_period):
     data.drop(columns='time', inplace=True)
+    print(data.shape)
     (n_observations, n_features) = data.shape # number of timestamps
     window_size = train_period + pred_period
     X = torch.zeros([n_observations - window_size, train_period, n_features])
@@ -14,7 +15,7 @@ def getXypairs(data, train_period, pred_period):
 
     for idx, x in enumerate(X):
         X[idx, :, :] = torch.tensor(data.iloc[idx:idx + train_period, :].to_numpy())
-        y[idx, :] = torch.tensor(data['total load actual'].iloc[idx + train_period:idx + window_size].to_numpy())
+        y[idx, :] = torch.tensor(data['value'].iloc[idx + train_period:idx + window_size].to_numpy())
 
     return X, y, n_observations, n_features
 

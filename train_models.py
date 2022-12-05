@@ -14,16 +14,16 @@ import Utils
 # for a new experiment, place a config file in a folder
 # and set the filepath accordingly
 
-filepath = "./results/network26"
+filepath = "./results/network27"
 
 params = Utils.get_model_params(filepath)
 
 train_period = params["train_period"]  # observation window size
 pred_period = params["pred_period"]  # prediction window size, should be 24 hours
-data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
+data = pd.read_csv("sinedata.csv")
 X, y, n_observations, n_features = Utils.getXypairs(data, train_period=train_period, pred_period=pred_period)
 
-X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.05, shuffle=False)
+X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.05, shuffle=False) #no shuffeling! (will leak information o/w)
 X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, shuffle=False)
 
 batch_size = params["batch_size"]
@@ -47,13 +47,17 @@ dropout = params["dropout"]
 n_epochs = params["n_epochs"]
 learning_rate = params["learning_rate"]
 weight_decay = params["weight_decay"]
+hidden_activation = params["hidden_activation"]
+output_activation = params["output_activation"]
 
 model_params = {'input_dim': input_dim,
                 'hidden_dim': hidden_dim,
                 'layer_dim': layer_dim,
                 'output_dim': output_dim,
                 'n_fc_layers': n_fc_layers,
-                'dropout_prob': dropout}
+                'dropout_prob': dropout,
+                'hidden_activation': hidden_activation,
+                'output_activation': output_activation}
 
 model_name = 'lstm'
 model = models.get_model(model_name, model_params)

@@ -18,21 +18,23 @@ def get_model(model, model_params):
 
 
 class LSTMModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, n_fc_layers=1, dropout_prob=0):
+    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, n_fc_layers=1, dropout_prob=0, hidden_activation="Identitiy", output_activation="Identity"):
         super(LSTMModel, self).__init__()
 
         # Defining the number of layers and the nodes in each layer
         self.hidden_dim = hidden_dim
         self.layer_dim = layer_dim
+        self.hidden_activation = hidden_activation
+        self.output_activation = output_activation
 
         # LSTM layers
         self.lstm = nn.LSTM(
-            input_dim, hidden_dim, layer_dim, batch_first=True, dropout=dropout_prob
+            input_dim, hidden_dim, layer_dim, batch_first=True, dropout=dropout_prob, bidirectional=False
         )
 
         # Fully connected layer
-        self.fc = nn.ModuleList([nn.Linear(hidden_dim, hidden_dim) for _ in range(n_fc_layers-1)])
-        self.out_layer = nn.Linear(hidden_dim, output_dim)
+        self.fc = nn.ModuleList([nn.Linear(hidden_dim,hidden_dim) for _ in range(n_fc_layers-1) if n_fc_layers > 1])
+        self.out_layer = nn.Linear(hidden_dim, output_dim,bias=True)
 
     def forward(self, x):
         # Initializing hidden state for first input with zeros
@@ -50,10 +52,28 @@ class LSTMModel(nn.Module):
         # so that it can fit into the fully connected layer
         out = out[:, -1, :]
 
+        #get activation for hidden and output
+        if self.hidden_activation == "Sigmoid":
+            hidden_activation = nn.Sigmoid()
+        elif self.hidden_activation == "ReLU":
+            hidden_activation = nn.ReLU()
+        else:
+            hidden_activation = nn.Identity()
+
+        if self.output_activation == "Sigmoid":
+            output_activation = nn.Sigmoid()
+        elif self.output_activation == "ReLU":
+            output_activation = nn.ReLU()
+        else:
+            output_activation = nn.Identity()
+        
+
         # Convert the final state to our desired output shape (batch_size, output_dim)
         for hidden_layer in self.fc:
             out = hidden_layer(out)
+            out = hidden_activation(out)
         out = self.out_layer(out)
+        out = output_activation(out)
 
         return out
 
@@ -70,10 +90,10 @@ class BayesianLSTMModel(nn.Module):
 
         # LSTM layers
         self.first_lstm = BayesianLSTM(input_dim, hidden_dim)
-        self.lstms = nn.ModuleList([BayesianLSTM(hidden_dim, hidden_dim) for _ in range(layer_dim-1)])
+        self.lstms = nn.ModuleList([BayesianLSTM(hidden_dim, hidden_dim) for _ in range(layer_dim-1) if layer_dim > 1])
 
         # Fully connected layer
-        self.fc = nn.ModuleList([BayesianLinear(hidden_dim, hidden_dim) for _ in range(n_fc_layers-1)])
+        self.fc = nn.ModuleList([BayesianLinear(hidden_dim, hidden_dim) for _ in range(n_fc_layers-1) if n_fc_layers > 1])
         self.out_layer = BayesianLinear(hidden_dim, output_dim)
 
     def forward(self, x):
@@ -121,6 +141,7 @@ class Optimization:
         loss = self.loss_fn(y, yhat)
 
         # Computes gradients
+        self.optimizer.zero_grad()
         loss.backward()
 
         # Updates parameters and zeroes gradients

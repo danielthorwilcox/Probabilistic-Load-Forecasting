@@ -44,14 +44,14 @@ def getXypairs(data, train_period, pred_period):
 W_obs = 164
 W_pred = 24
 
-load_data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
-timeseries = load_data["total load actual"]
+load_data = pd.read_csv("sinedata.csv")
+timeseries = load_data["value"]
 print(timeseries.head())
 
 X, y = getXypairs(timeseries,W_obs,W_pred)
 print(X.shape)
 
-X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2,shuffle=False)
+X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.1,shuffle=False)
 
 lrmodel = LinearRegression()
 lrmodel.fit(X_train,y_train)
@@ -65,8 +65,8 @@ print("Linear Regression predictor with MSE: ", mse, ", r2 score: ", r2)
 
 #'''
 #plot one of the perdiction windows vs the real values in that window
-plt.plot(y_test[1001,:])
-plt.plot(predictions[1001,:])
+plt.plot(y_test[100,:])
+plt.plot(predictions[100,:])
 plt.legend(["true values", "predictions"])
 plt.title("Example prediction of the Linear Regression model")
 plt.show()
