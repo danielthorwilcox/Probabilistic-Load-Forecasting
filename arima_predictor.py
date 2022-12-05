@@ -69,8 +69,8 @@ W_pred = 12
 n_runs = 100 #number of ARIMA models to fit and evaluate (and average MSEs over)
 n_plots = 2 #number of example plots
 
-data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
-ts = data["total load actual"]
+data = pd.read_csv("sinedata.csv")
+ts = data["value"]
 ts_wss = ts.dropna() #find differencing order to make the series WSS
 
 

@@ -5,9 +5,9 @@ parameters:
   layer_dim: 5
   n_fc_layers: 1
   learning_rate: 0.01
-  n_epochs: 50
+  n_epochs: 10
   pred_period: 24
   train_period: 164
   weight_decay: 0.0
-  hidden_activation: "ReLU"
+  hidden_activation: "Linear"
   output_activation: "Linear"
