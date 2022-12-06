@@ -46,6 +46,7 @@ W_pred = 24
 
 load_data = pd.read_csv("sinedata.csv")
 timeseries = load_data["value"]
+timeseries = timeseries.diff().dropna()
 print(timeseries.head())
 
 X, y = getXypairs(timeseries,W_obs,W_pred)

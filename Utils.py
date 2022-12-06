@@ -17,7 +17,7 @@ def getXypairs(data, train_period, pred_period):
         X[idx, :, :] = torch.tensor(data.iloc[idx:idx + train_period, :].to_numpy())
         y[idx, :] = torch.tensor(data['value'].iloc[idx + train_period:idx + window_size].to_numpy())
 
-    return X, y, n_observations, n_features
+    return torch.diff(X,axis=0), torch.diff(y,axis=0), n_observations, n_features
 
 
 def get_model_params(filepath):
