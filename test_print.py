@@ -4,9 +4,9 @@ import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import fl_models
 
-with open('bayseian_predictions.pickle', 'rb') as handle:
+with open('bayseian_predictions_1.pickle', 'rb') as handle:
     predictions = pickle.load(handle)
-with open('bayesian_values.pickle', 'rb') as handle:
+with open('bayesian_values_1.pickle', 'rb') as handle:
     true_values = pickle.load(handle)
 
 
@@ -32,14 +32,16 @@ print(mse)
 
 
 pred_period = 24
-some_idx = 13
+some_idx = 1000
 single_pred = predictions[some_idx, :, :]
 print(predictions.shape)
 
 single_pred, ci_upper, ci_lower = fl_models.get_confidence_intervals(single_pred, 2)
-print(single_pred)
+print(predictions[some_idx, 0, :])
+print('---------------')
+print(true_values[some_idx, 0, :])
 # Plot single prediction
-# plt.plot(np.squeeze(true_values[some_idx, :, :]))
+plt.plot(np.squeeze(true_values[some_idx, :, :]))
 plt.plot(np.squeeze(single_pred))
 plt.fill_between(x=np.arange(pred_period),
                 y1=np.squeeze(ci_upper),

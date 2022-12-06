@@ -112,7 +112,7 @@ class Client:
 def main():
     start = time.time()
     full_dataset = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
-    type_of_model = 'lstm' # 'bayesian_lstm' or 'lstm'
+    type_of_model = 'bayesian_lstm' # 'bayesian_lstm' or 'lstm'
     ##=========================================================================
     # Parameters for the clients/agents
     client_parameters = {
@@ -141,25 +141,29 @@ def main():
     if type_of_model == 'bayesian_lstm':
         client_parameters['n_fc_layers'] = 1
         global_parameters['n_fc_layers'] = 1
-    train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(global_parameters, full_dataset)
-    input_dim = n_features
+    # train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(global_parameters, full_dataset)
     ## FL settings
     num_clients = 3
-    epochs_per_client = 1
-    rounds = 1
+    epochs_per_client = 5
+    rounds = 5
+    test_dataset = full_dataset.copy()[int(full_dataset.shape[0]*0.7):int(full_dataset.shape[0])]
+    train_dataset = full_dataset.copy()[int(full_dataset.shape[0]*0):int(full_dataset.shape[0]*0.7)]
+    # print(train_dataset.shape)
+    # train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(global_parameters, test_dataset)
 
-    ## Settings above this line are to be changed
-    ##==================================================================
+    # Settings above this line are to be changed
+    #==================================================================
     # Splitting the dataset for the clients
     datasets = []
     for i in range(num_clients):
-        datasets.append(full_dataset.copy()[int((i*full_dataset.shape[0])/num_clients) : int(((i+1)*full_dataset.shape[0])/num_clients)])
+        datasets.append(test_dataset.copy()[int((i*test_dataset.shape[0])/num_clients) : int(((i+1)*test_dataset.shape[0])/num_clients)])
     clients = [Client('client_' + str(i), datasets[i], epochs_per_client, client_parameters, type_of_model) for i in range(num_clients)] ## creates the clients
     # ##==================================================================
 
     # ##==================================================================
     # # Creating the global network
-    global_model = create_model(full_dataset, global_parameters, type_of_model)
+    train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(global_parameters, test_dataset)
+    global_model = create_model(test_dataset, global_parameters, type_of_model)
     global_model.to(device)
 
     ##====================================================================
@@ -178,6 +182,7 @@ def main():
 
     ##====================================================================
     # Global model evaluation
+    input_dim = n_features
     loss_fn = nn.MSELoss(reduction="mean")
     optimizer = optim.Adam(global_model.parameters(), global_parameters['learning_rate'], weight_decay=global_parameters['weight_decay'])
     opt = fl_models.Optimization(model=global_model, loss_fn=loss_fn, optimizer=optimizer)
@@ -188,24 +193,14 @@ def main():
     r2 = r2_score(predictions_mean.flatten(), true_values.flatten())
     ## =============================================
     ## Save values to a file
-    # with open('bayseian_predictions.pickle', 'wb') as handle:
-    #     pickle.dump(predictions, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    # with open('bayesian_values.pickle', 'wb') as handle:
-    #     pickle.dump(true_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('bayseian_predictions_1.pickle', 'wb') as handle:
+        pickle.dump(predictions, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('bayesian_values_1.pickle', 'wb') as handle:
+        pickle.dump(true_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
     ## ===================================================================
     end = time.time()
     print('Time for evaluate: '+ str(end-midtime))
     print('Total time running: '+ str(end-start))
-
-    ## ===================================================================
-    # Plotting values and predictions
-    # predictions = predictions.reshape(predictions.shape[0], predictions.shape[2])
-    # values = values.reshape(values.shape[0], values.shape[2])
-    # print(mse)
-    # plt.plot(values[130,:])
-    # plt.plot(predictions[130,:])
-    # plt.legend(["true values", "predictions"])
-    # plt.show()
 
 
 
@@ -233,6 +228,7 @@ def main():
                         alpha=0.5)
         plt.legend(["true values", "predictions", "ci"])
         plt.show()
+    print(predictions.shape)
 
 
 
