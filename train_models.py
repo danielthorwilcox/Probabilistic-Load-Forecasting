@@ -14,7 +14,7 @@ import Utils
 # for a new experiment, place a config file in a folder
 # and set the filepath accordingly
 
-filepath = "./results/network26"
+filepath = "./results/network41"
 
 params = Utils.get_model_params(filepath)
 
@@ -24,7 +24,7 @@ data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 X, y, n_observations, n_features = Utils.getXypairs(data, train_period=train_period, pred_period=pred_period)
 
 X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.05, shuffle=False)
-X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, shuffle=False)
+X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.3, shuffle=False)
 
 batch_size = params["batch_size"]
 
@@ -32,10 +32,10 @@ train_set = TensorDataset(X_train, y_train)
 val_set = TensorDataset(X_val, y_val)
 test_set = TensorDataset(X_test, y_test)
 
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=False, drop_last=True)
-val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, drop_last=True)
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, drop_last=True)
-test_loader_one = DataLoader(test_set, batch_size=1, shuffle=False, drop_last=True)
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, drop_last=True)
+val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, drop_last=True)
+test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, drop_last=True)
+test_loader_one = DataLoader(test_set, batch_size=1, shuffle=True, drop_last=True)
 
 # Train network
 input_dim = n_features
@@ -55,8 +55,9 @@ model_params = {'input_dim': input_dim,
                 'n_fc_layers': n_fc_layers,
                 'dropout_prob': dropout}
 
-model_name = 'lstm'
+model_name = params["model"]
 model = models.get_model(model_name, model_params)
+print(model)
 
 loss_fn = nn.MSELoss(reduction="mean")
 optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)

@@ -31,7 +31,7 @@ class LSTMModel(nn.Module):
         )
 
         # Fully connected layer
-        self.fc = nn.ModuleList([nn.Linear(hidden_dim, hidden_dim) for _ in range(n_fc_layers-1)])
+        self.fc = nn.ModuleList([nn.Linear(hidden_dim, hidden_dim) for _ in range(n_fc_layers-1) if n_fc_layers > 1])
         self.out_layer = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
@@ -70,10 +70,10 @@ class BayesianLSTMModel(nn.Module):
 
         # LSTM layers
         self.first_lstm = BayesianLSTM(input_dim, hidden_dim)
-        self.lstms = nn.ModuleList([BayesianLSTM(hidden_dim, hidden_dim) for _ in range(layer_dim-1)])
+        self.lstms = nn.ModuleList([BayesianLSTM(hidden_dim, hidden_dim) for _ in range(layer_dim-1) if layer_dim > 1])
 
         # Fully connected layer
-        self.fc = nn.ModuleList([BayesianLinear(hidden_dim, hidden_dim) for _ in range(n_fc_layers-1)])
+        self.fc = nn.ModuleList([BayesianLinear(hidden_dim, hidden_dim) for _ in range(n_fc_layers-1) if n_fc_layers > 1])
         self.out_layer = BayesianLinear(hidden_dim, output_dim)
 
     def forward(self, x):
