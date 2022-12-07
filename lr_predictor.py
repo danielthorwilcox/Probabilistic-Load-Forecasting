@@ -46,12 +46,13 @@ W_pred = 24
 
 load_data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
 timeseries = load_data["total load actual"]
+#timeseries = timeseries.diff().dropna()
 print(timeseries.head())
 
 X, y = getXypairs(timeseries,W_obs,W_pred)
 print(X.shape)
 
-X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2,shuffle=False)
+X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2,shuffle=True)
 
 lrmodel = LinearRegression()
 lrmodel.fit(X_train,y_train)

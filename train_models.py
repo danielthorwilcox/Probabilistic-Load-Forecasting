@@ -14,7 +14,7 @@ import Utils
 # for a new experiment, place a config file in a folder
 # and set the filepath accordingly
 
-filepath = "./results/network26"
+filepath = "./results/network28"
 
 params = Utils.get_model_params(filepath)
 
