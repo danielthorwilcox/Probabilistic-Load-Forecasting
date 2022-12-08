@@ -12,11 +12,10 @@ import Utils
 
 # define filepath for config file and result data:
 # for a new experiment, place a config file in a folder
-# and set the filepath accordingly
+# and set the filepath accordingly in Utils.py
 
-filepath = "./results/network41"
 
-params = Utils.get_model_params(filepath)
+params = Utils.get_model_params()
 
 train_period = params["train_period"]  # observation window size
 pred_period = params["pred_period"]  # prediction window size, should be 24 hours
@@ -67,7 +66,7 @@ opt.train(train_loader, val_loader, batch_size=batch_size, n_epochs=n_epochs, n_
 opt.plot_losses()
 
 # save some metrics to disc
-opt.save_losses(filepath=filepath)
+opt.save_losses(filepath=Utils.networkpath)
 torch.save(model, f"models/some_model")
 
 predictions, true_values = opt.evaluate(test_loader_one, model_name, batch_size=1, n_features=input_dim)
@@ -75,7 +74,7 @@ predictions_mean = np.mean(predictions, axis=1)  # mean of the bayesian outputs,
 mse = mean_squared_error(predictions_mean.flatten(), true_values.flatten())
 mae = mean_absolute_error(predictions_mean.flatten(), true_values.flatten())
 r2 = r2_score(predictions_mean.flatten(), true_values.flatten())
-with open(join(filepath,"test_loss.txt"), 'w') as f:
+with open(join(Utils.networkpath, "test_loss.txt"), 'w') as f:
     f.write("MSE: ")
     f.write(str(mse))
     f.write("\nMAE: ")

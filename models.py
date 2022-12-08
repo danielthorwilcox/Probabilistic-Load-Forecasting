@@ -7,6 +7,8 @@ import pandas as pd
 from os.path import join
 from blitz.modules import BayesianLSTM, BayesianLinear
 from blitz.utils import variational_estimator
+from typing import List
+from collections import OrderedDict
 
 
 def get_model(model, model_params):
@@ -56,6 +58,15 @@ class LSTMModel(nn.Module):
         out = self.out_layer(out)
 
         return out
+    def get_parameters(self) -> List[np.ndarray]:
+        ## Returns the model parameters
+        # return [val.cpu().numpy() for _, val in self.state_dict().items()]
+        return self.state_dict()
+
+    def set_parameters(self, parameters):
+        params_dict = zip(self.state_dict().keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        self.load_state_dict(state_dict, strict=True)
 
 
 @variational_estimator
@@ -100,6 +111,16 @@ class BayesianLSTMModel(nn.Module):
         out = self.out_layer(out)
 
         return out
+
+    def get_parameters(self) -> List[np.ndarray]:
+        ## Returns the model parameters
+        # return [val.cpu().numpy() for _, val in self.state_dict().items()]
+        return self.state_dict()
+
+    def set_parameters(self, parameters):
+        params_dict = zip(self.state_dict().keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        self.load_state_dict(state_dict, strict=True)
 
 
 class Optimization:
@@ -192,26 +213,18 @@ class Optimization:
 
 
 def get_confidence_intervals(preds_test, ci_multiplier):
-    # global scaler
-
     preds_test = torch.tensor(preds_test)
 
     pred_mean = preds_test.mean(dim=0).clone().detach()
     pred_std = preds_test.std(dim=0).clone().detach()
 
-    # pred_std = torch.tensor(pred_std).clone().detach()
-
     upper_bound = pred_mean + (pred_std * ci_multiplier)
     lower_bound = pred_mean - (pred_std * ci_multiplier)
-    # gather unscaled confidence intervals
 
     pred_mean_unscaled = pred_mean.unsqueeze(1).detach().cpu().numpy()
-    # pred_mean_unscaled = scaler.inverse_transform(pred_mean_final)
 
     upper_bound_unscaled = upper_bound.unsqueeze(1).detach().cpu().numpy()
-    # upper_bound_unscaled = scaler.inverse_transform(upper_bound_unscaled)
 
     lower_bound_unscaled = lower_bound.unsqueeze(1).detach().cpu().numpy()
-    # lower_bound_unscaled = scaler.inverse_transform(lower_bound_unscaled)
 
     return pred_mean_unscaled, upper_bound_unscaled, lower_bound_unscaled
