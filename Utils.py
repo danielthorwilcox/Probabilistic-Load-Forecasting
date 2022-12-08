@@ -5,8 +5,13 @@ import yaml
 from os.path import join
 
 
+networkpath = "./results/network41"
+
 def getXypairs(data, train_period, pred_period):
-    data.drop(columns='dt_iso', inplace=True)
+    if 'dt_iso' in data:
+        data.drop(columns='dt_iso', inplace=True)
+    elif 'time' in data:
+        data.drop(columns='time', inplace=True)
     (n_observations, n_features) = data.shape # number of timestamps
     window_size = train_period + pred_period
     X = torch.zeros([n_observations - window_size, train_period, n_features])
@@ -19,7 +24,7 @@ def getXypairs(data, train_period, pred_period):
     return X, y, n_observations, n_features
 
 
-def get_model_params(filepath):
+def get_model_params(filepath=networkpath):
     # get model parameters from config file
     with open(join(filepath, "config.yaml"), 'r') as f:
         try:
