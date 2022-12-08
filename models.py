@@ -153,7 +153,7 @@ class Optimization:
                 validation_loss = np.mean(batch_val_losses)
                 self.val_losses.append(validation_loss)
 
-            if (epoch <= 50) | (epoch % 50 == 0):
+            if (epoch <= 5) | (epoch % 10 == 0):
                 print(
                     f"[{epoch}/{n_epochs}] Training loss: {training_loss:.4f}\t Validation loss: {validation_loss:.4f}"
                 )

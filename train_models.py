@@ -14,13 +14,13 @@ import Utils
 # for a new experiment, place a config file in a folder
 # and set the filepath accordingly
 
-filepath = "./results/network26"
+filepath = "./results/network31"
 
 params = Utils.get_model_params(filepath)
 
 train_period = params["train_period"]  # observation window size
 pred_period = params["pred_period"]  # prediction window size, should be 24 hours
-data = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
+data = pd.read_csv("demand_generation/final_features_normalized.csv")
 X, y, n_observations, n_features = Utils.getXypairs(data, train_period=train_period, pred_period=pred_period)
 
 X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.05, shuffle=False)
