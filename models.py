@@ -37,6 +37,8 @@ class LSTMModel(nn.Module):
         self.out_layer = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
+        x = x + np.sqrt(0.1)*torch.randn(x.size())  # gaussian noise added to input
+
         # Initializing hidden state for first input with zeros
         h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).requires_grad_()
 
@@ -58,6 +60,7 @@ class LSTMModel(nn.Module):
         out = self.out_layer(out)
 
         return out
+
     def get_parameters(self) -> List[np.ndarray]:
         ## Returns the model parameters
         # return [val.cpu().numpy() for _, val in self.state_dict().items()]

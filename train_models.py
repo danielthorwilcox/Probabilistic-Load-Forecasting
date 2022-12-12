@@ -31,10 +31,11 @@ train_set = TensorDataset(X_train, y_train)
 val_set = TensorDataset(X_val, y_val)
 test_set = TensorDataset(X_test, y_test)
 
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, drop_last=True)
-val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, drop_last=True)
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, drop_last=True)
-test_loader_one = DataLoader(test_set, batch_size=1, shuffle=True, drop_last=True)
+shuffle = True
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=shuffle, drop_last=True)
+val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=shuffle, drop_last=True)
+test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=shuffle, drop_last=True)
+test_loader_one = DataLoader(test_set, batch_size=1, shuffle=shuffle, drop_last=True)
 
 # Train network
 input_dim = n_features
