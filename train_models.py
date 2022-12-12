@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from os.path import join
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import Utils
+from Utils import networkpath
 
 # define filepath for config file and result data:
 # for a new experiment, place a config file in a folder
@@ -19,11 +20,11 @@ params = Utils.get_model_params()
 
 train_period = params["train_period"]  # observation window size
 pred_period = params["pred_period"]  # prediction window size, should be 24 hours
-data = pd.read_csv("demand_generation/final_features_normalized.csv")
+data = pd.read_csv("demand_generation/timeseries.csv")
 X, y, n_observations, n_features = Utils.getXypairs(data, train_period=train_period, pred_period=pred_period)
 
-X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.05, shuffle=False)
-X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.3, shuffle=False)
+X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, shuffle=False)
 
 batch_size = params["batch_size"]
 
@@ -68,7 +69,7 @@ opt.plot_losses()
 
 # save some metrics to disc
 opt.save_losses(filepath=Utils.networkpath)
-torch.save(model, f"models/some_model")
+torch.save(model, join(networkpath,"model"))
 
 predictions, true_values = opt.evaluate(test_loader_one, model_name, batch_size=1, n_features=input_dim)
 predictions_mean = np.mean(predictions, axis=1)  # mean of the bayesian outputs, if non-bayesian it has no effect
@@ -84,9 +85,17 @@ with open(join(Utils.networkpath, "test_loss.txt"), 'w') as f:
     f.write(str(r2))
 
 some_idx = 13
+some_idx_2 = 501
 single_pred = predictions[some_idx, :, :]
+single_pred_2 = predictions[some_idx_2, :, :]
+
+step = np.arange(0,24)
+
 
 if model_name == 'lstm':
+    # Save single prediction
+    df = pd.DataFrame(np.array([step,np.squeeze(single_pred),np.squeeze(true_values[some_idx,:,:]),np.squeeze(single_pred_2), np.squeeze(true_values[some_idx_2,:,:])]).T, columns=["step","prediction 1","true value 1","prediction 2", "true value 2"])
+    df.to_csv(join(networkpath,"example_predictions.csv"))
     # Plot single prediction
     plt.plot(np.squeeze(true_values[some_idx, :, :]))
     plt.plot(np.squeeze(single_pred))
@@ -94,6 +103,9 @@ if model_name == 'lstm':
     plt.show()
 elif model_name == 'bayesian_lstm':
     single_pred, ci_upper, ci_lower = models.get_confidence_intervals(single_pred, 2)
+    single_pred_2, ci_upper_2, ci_lower_2 = models.get_confidence_intervals(single_pred_2, 2)
+    df = pd.DataFrame(np.array([step,np.squeeze(single_pred),np.squeeze(true_values[some_idx,:,:]),np.squeeze(ci_lower),np.squeeze(ci_upper),np.squeeze(single_pred_2), np.squeeze(true_values[some_idx_2,:,:]),np.squeeze(ci_lower_2),np.squeeze(ci_upper_2)]).T, columns=["step","prediction 1","true value 1","ci lower 1","ci upper 1","prediction 2", "true value 2","ci lower 2","ci upper 2"])
+    df.to_csv(join(networkpath,"example_predictions.csv"))
     # Plot single prediction
     plt.plot(np.squeeze(true_values[some_idx, :, :]))
     plt.plot(np.squeeze(single_pred))

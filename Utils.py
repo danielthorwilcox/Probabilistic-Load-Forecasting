@@ -5,7 +5,7 @@ import yaml
 from os.path import join
 
 
-networkpath = "./results/network41"
+networkpath = "./results/network44"
 
 def getXypairs(data, train_period, pred_period):
     if 'dt_iso' in data:
@@ -19,7 +19,7 @@ def getXypairs(data, train_period, pred_period):
 
     for idx, x in enumerate(X):
         X[idx, :, :] = torch.tensor(data.iloc[idx:idx + train_period, :].to_numpy())
-        y[idx, :] = torch.tensor(data['total_load_actual'].iloc[idx + train_period:idx + window_size].to_numpy())
+        y[idx, :] = torch.tensor(data['total load actual'].iloc[idx + train_period:idx + window_size].to_numpy())
 
     return X, y, n_observations, n_features
 
