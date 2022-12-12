@@ -89,12 +89,10 @@ some_idx_2 = 501
 single_pred = predictions[some_idx, :, :]
 single_pred_2 = predictions[some_idx_2, :, :]
 
-step = np.arange(0,24)
-
 
 if model_name == 'lstm':
     # Save single prediction
-    df = pd.DataFrame(np.array([step,np.squeeze(single_pred),np.squeeze(true_values[some_idx,:,:]),np.squeeze(single_pred_2), np.squeeze(true_values[some_idx_2,:,:])]).T, columns=["step","prediction 1","true value 1","prediction 2", "true value 2"])
+    df = pd.DataFrame(np.array([np.squeeze(single_pred),np.squeeze(true_values[some_idx,:,:]),np.squeeze(single_pred_2), np.squeeze(true_values[some_idx_2,:,:])]).T, columns=["prediction 1","true value 1","prediction 2", "true value 2"])
     df.to_csv(join(networkpath,"example_predictions.csv"))
     # Plot single prediction
     plt.plot(np.squeeze(true_values[some_idx, :, :]))
