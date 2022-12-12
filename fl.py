@@ -14,6 +14,7 @@ import pickle
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import time
 import Utils
+from os.path import join
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -112,22 +113,20 @@ def main():
         'n_fc_layers': params['n_fc_layers']
     }
 
-    # train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(global_parameters, full_dataset)
     ## FL settings
     num_clients = 3
     epochs_per_client = 5
     rounds = 5
-    test_dataset = full_dataset.copy()[int(full_dataset.shape[0]*0.7):int(full_dataset.shape[0])]
     train_dataset = full_dataset.copy()[int(full_dataset.shape[0]*0):int(full_dataset.shape[0]*0.7)]
-    # print(train_dataset.shape)
-    # train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(global_parameters, test_dataset)
+    test_dataset = full_dataset.copy()[int(full_dataset.shape[0]*0.7):int(full_dataset.shape[0])]
+
 
     # Settings above this line are to be changed
     #==================================================================
     # Splitting the dataset for the clients
     datasets = []
     for i in range(num_clients):
-        datasets.append(test_dataset.copy()[int((i*test_dataset.shape[0])/num_clients) : int(((i+1)*test_dataset.shape[0])/num_clients)])
+        datasets.append(test_dataset.copy()[int((i*train_dataset.shape[0])/num_clients) : int(((i+1)*train_dataset.shape[0])/num_clients)])
     clients = [Client('client_' + str(i), datasets[i], epochs_per_client, parameters, type_of_model) for i in range(num_clients)] ## creates the clients
     # ##==================================================================
 
@@ -172,6 +171,16 @@ def main():
     end = time.time()
     print('Time for evaluate: '+ str(end-midtime))
     print('Total time running: '+ str(end-start))
+    print(mse)
+    print(mae)
+    print(r2)
+    with open(join(Utils.networkpath, "test_loss.txt"), 'w') as f:
+        f.write("MSE: ")
+        f.write(str(mse))
+        f.write("\nMAE: ")
+        f.write(str(mae))
+        f.write("\nr2 score: ")
+        f.write(str(r2))
 
 
 
