@@ -10,7 +10,7 @@ import pandas as pd
 from torchsummary import summary
 from torch import nn, optim
 from collections import OrderedDict
-import pickle
+import pickle5 as pickle
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import time
 import Utils
@@ -24,29 +24,32 @@ def to_device(data, device):
     return data.to(device, non_blocking=True)
 
 
-def load_data(parameters, dataset):
+def load_data(parameters, dataset, test_size=0.2):
     ##===========================================
     ## Loads the dataset and devides up the features
     ##===========================================
+    test_size1 = test_size
     train_period = parameters['train_period']
     pred_period = parameters['pred_period']
     data = dataset
     X, y, n_observations, n_features = Utils.getXypairs(data, train_period=train_period, pred_period=pred_period)
 
-    X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
-    X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, shuffle=False)
+    # X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=test_size1, shuffle=False)
+    # X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=test_size1, shuffle=False)
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=test_size1, shuffle=False)
 
     batch_size = parameters['batch_size']
 
     train_set = TensorDataset(X_train, y_train)
     val_set = TensorDataset(X_val, y_val)
-    test_set = TensorDataset(X_test, y_test)
+    # test_set = TensorDataset(X_test, y_test)
 
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, drop_last=True)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, drop_last=True)
-    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, drop_last=True)
-    test_loader_one = DataLoader(test_set, batch_size=1, shuffle=True, drop_last=True)
-    return train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations
+    # test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, drop_last=True)
+    # test_loader_one = DataLoader(test_set, batch_size=1, shuffle=True, drop_last=True)
+    # return train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations
+    return train_loader, val_loader, n_features, n_observations
 
 def create_model(dataset, parameters, type_of_model):
     ##===========================================
@@ -80,7 +83,8 @@ class Client:
         self.weight_decay = self.parameters['weight_decay']
         self.train_period = self.parameters['train_period']
         self.pred_period = self.parameters['pred_period']
-        self.train_loader, self.val_loader, self.test_loader, self.test_loader_one, self.n_features, self.n_observations = load_data(self.parameters, self.dataset)
+        # self.train_loader, self.val_loader, self.test_loader, self.test_loader_one, self.n_features, self.n_observations = load_data(self.parameters, self.dataset)
+        self.train_loader, self.val_loader, self.n_features, self.n_observations = load_data(self.parameters, self.dataset)
 
     def train(self, global_parameters):
         ## Train the client model with the parameters from the global network
@@ -96,8 +100,9 @@ class Client:
 
 def main():
     start = time.time()
-    full_dataset = pd.read_csv("demand_generation/energy_dataset_lininterp.csv")
-    params = Utils.get_model_params()
+    networkpath = "./results/network25"
+    full_dataset = pd.read_csv("demand_generation/final_features_normalized.csv")
+    params = Utils.get_model_params(networkpath)
     type_of_model = params['model'] # 'bayesian_lstm' or 'lstm'
     ##=========================================================================
     # Parameters for the clients/agents
@@ -115,10 +120,11 @@ def main():
 
     ## FL settings
     num_clients = 3
-    epochs_per_client = 5
-    rounds = 5
-    train_dataset = full_dataset.copy()[int(full_dataset.shape[0]*0):int(full_dataset.shape[0]*0.7)]
-    test_dataset = full_dataset.copy()[int(full_dataset.shape[0]*0.7):int(full_dataset.shape[0])]
+    epochs_per_client = 4
+    rounds = 4
+    test_size = 0.2
+    train_dataset = full_dataset.copy()[int(full_dataset.shape[0]*0):int(full_dataset.shape[0]*(1-test_size))]
+    test_dataset = full_dataset.copy()[int(full_dataset.shape[0]*(1-test_size)):int(full_dataset.shape[0])]
 
 
     # Settings above this line are to be changed
@@ -126,13 +132,23 @@ def main():
     # Splitting the dataset for the clients
     datasets = []
     for i in range(num_clients):
-        datasets.append(test_dataset.copy()[int((i*train_dataset.shape[0])/num_clients) : int(((i+1)*train_dataset.shape[0])/num_clients)])
+        datasets.append(train_dataset.copy(deep=True)[int((i*train_dataset.shape[0])/num_clients) : int(((i+1)*train_dataset.shape[0])/num_clients)])
+        print(i)
+        print(train_dataset.shape)
+        print(int((i*train_dataset.shape[0])/num_clients))
+        print(int(((i+1)*train_dataset.shape[0])/num_clients))
+        print(datasets[i].shape)
+        print('-------------------')
     clients = [Client('client_' + str(i), datasets[i], epochs_per_client, parameters, type_of_model) for i in range(num_clients)] ## creates the clients
     # ##==================================================================
 
     # ##==================================================================
     # # Creating the global network
-    train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(parameters, test_dataset)
+    # train_loader, val_loader, test_loader, test_loader_one, n_features, n_observations = load_data(parameters, test_dataset, test_size=0.99)
+    # n_features = test_dataset.shape[1]
+    X, y, n_observations, n_features = Utils.getXypairs(test_dataset, train_period=parameters['train_period'], pred_period=parameters['pred_period'])
+    test_set = TensorDataset(X, y)
+    test_loader_one = DataLoader(test_set, batch_size=1, shuffle=True, drop_last=True)
     global_model = create_model(test_dataset, parameters, type_of_model)
     global_model.to(device)
 
@@ -163,7 +179,7 @@ def main():
     r2 = r2_score(predictions_mean.flatten(), true_values.flatten())
     ## =============================================
     ## Save values to a file
-    with open('bayseian_predictions_1.pickle', 'wb') as handle:
+    with open(join(networkpath, 'bayseian_predictions_1.pickle'), 'wb') as handle:
         pickle.dump(predictions, handle, protocol=pickle.HIGHEST_PROTOCOL)
     with open('bayesian_values_1.pickle', 'wb') as handle:
         pickle.dump(true_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -174,7 +190,7 @@ def main():
     print(mse)
     print(mae)
     print(r2)
-    with open(join(Utils.networkpath, "test_loss.txt"), 'w') as f:
+    with open(join(networkpath, "test_loss.txt"), 'w') as f:
         f.write("MSE: ")
         f.write(str(mse))
         f.write("\nMAE: ")
