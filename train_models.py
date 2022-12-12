@@ -102,7 +102,7 @@ if model_name == 'lstm':
 elif model_name == 'bayesian_lstm':
     single_pred, ci_upper, ci_lower = models.get_confidence_intervals(single_pred, 2)
     single_pred_2, ci_upper_2, ci_lower_2 = models.get_confidence_intervals(single_pred_2, 2)
-    df = pd.DataFrame(np.array([step,np.squeeze(single_pred),np.squeeze(true_values[some_idx,:,:]),np.squeeze(ci_lower),np.squeeze(ci_upper),np.squeeze(single_pred_2), np.squeeze(true_values[some_idx_2,:,:]),np.squeeze(ci_lower_2),np.squeeze(ci_upper_2)]).T, columns=["step","prediction 1","true value 1","ci lower 1","ci upper 1","prediction 2", "true value 2","ci lower 2","ci upper 2"])
+    df = pd.DataFrame(np.array([np.squeeze(single_pred),np.squeeze(true_values[some_idx,:,:]),np.squeeze(ci_lower),np.squeeze(ci_upper),np.squeeze(single_pred_2), np.squeeze(true_values[some_idx_2,:,:]),np.squeeze(ci_lower_2),np.squeeze(ci_upper_2)]).T, columns=["prediction 1","true value 1","ci lower 1","ci upper 1","prediction 2", "true value 2","ci lower 2","ci upper 2"])
     df.to_csv(join(networkpath,"example_predictions.csv"))
     # Plot single prediction
     plt.plot(np.squeeze(true_values[some_idx, :, :]))
