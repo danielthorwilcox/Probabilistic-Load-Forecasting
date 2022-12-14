@@ -1,0 +1,6 @@
+MSE: 0.23201768
+MAE: 0.3549483
+r2 score: 0.682171710158243
+Time for training: 4994.253433704376
+Time for evaluate: 3188.0443754196167
+Total time running: 8182.297809123993

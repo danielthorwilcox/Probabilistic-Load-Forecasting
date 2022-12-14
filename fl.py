@@ -10,7 +10,7 @@ import pandas as pd
 from torchsummary import summary
 from torch import nn, optim
 from collections import OrderedDict
-import pickle5 as pickle
+import pickle
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import time
 import Utils
@@ -100,8 +100,8 @@ class Client:
 
 def main():
     start = time.time()
-    networkpath = "./results/network25"
-    full_dataset = pd.read_csv("demand_generation/final_features_normalized.csv")
+    networkpath = "./results/fl_network2"
+    full_dataset = pd.read_csv("demand_generation/timeseries.csv")
     params = Utils.get_model_params(networkpath)
     type_of_model = params['model'] # 'bayesian_lstm' or 'lstm'
     ##=========================================================================
@@ -120,7 +120,7 @@ def main():
 
     ## FL settings
     num_clients = 3
-    epochs_per_client = 4
+    epochs_per_client = 7
     rounds = 4
     test_size = 0.2
     train_dataset = full_dataset.copy()[int(full_dataset.shape[0]*0):int(full_dataset.shape[0]*(1-test_size))]
@@ -133,12 +133,12 @@ def main():
     datasets = []
     for i in range(num_clients):
         datasets.append(train_dataset.copy(deep=True)[int((i*train_dataset.shape[0])/num_clients) : int(((i+1)*train_dataset.shape[0])/num_clients)])
-        print(i)
-        print(train_dataset.shape)
-        print(int((i*train_dataset.shape[0])/num_clients))
-        print(int(((i+1)*train_dataset.shape[0])/num_clients))
-        print(datasets[i].shape)
-        print('-------------------')
+        # print(i)
+        # print(train_dataset.shape)
+        # print(int((i*train_dataset.shape[0])/num_clients))
+        # print(int(((i+1)*train_dataset.shape[0])/num_clients))
+        # print(datasets[i].shape)
+        # print('-------------------')
     clients = [Client('client_' + str(i), datasets[i], epochs_per_client, parameters, type_of_model) for i in range(num_clients)] ## creates the clients
     # ##==================================================================
 
@@ -177,26 +177,38 @@ def main():
     mse = mean_squared_error(predictions_mean.flatten(), true_values.flatten())
     mae = mean_absolute_error(predictions_mean.flatten(), true_values.flatten())
     r2 = r2_score(predictions_mean.flatten(), true_values.flatten())
-    ## =============================================
-    ## Save values to a file
-    with open(join(networkpath, 'bayseian_predictions_1.pickle'), 'wb') as handle:
-        pickle.dump(predictions, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    with open('bayesian_values_1.pickle', 'wb') as handle:
-        pickle.dump(true_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    ## ===================================================================
     end = time.time()
     print('Time for evaluate: '+ str(end-midtime))
     print('Total time running: '+ str(end-start))
-    print(mse)
-    print(mae)
-    print(r2)
-    with open(join(networkpath, "test_loss.txt"), 'w') as f:
+    print('mse: ' + str(mse))
+    print('mae: ' + str(mae))
+    print('r2: ' + str(r2))
+    ## =============================================
+    ## Save values to a file
+    if type_of_model == 'lstm':
+        with open(join(networkpath, 'fl_predictions.pickle'), 'wb') as handle:
+            pickle.dump(predictions, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(join(networkpath, 'fl_values.pickle'), 'wb') as handle:
+            pickle.dump(true_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    elif type_of_model == 'bayesian_lstm':
+        with open(join(networkpath, 'fl_bayesian_predictions.pickle'), 'wb') as handle:
+            pickle.dump(predictions, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(join(networkpath, 'fl_bayesian_values.pickle'), 'wb') as handle:
+            pickle.dump(true_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    ## ===================================================================
+    with open(join(networkpath, "bayesian_lstm_test_loss.txt"), 'w') as f:
         f.write("MSE: ")
         f.write(str(mse))
         f.write("\nMAE: ")
         f.write(str(mae))
         f.write("\nr2 score: ")
         f.write(str(r2))
+        f.write("\nTime for training: ")
+        f.write(str(midtime-start))
+        f.write("\nTime for evaluate: ")
+        f.write(str(end-midtime))
+        f.write("\nTotal time running: ")
+        f.write(str(end-start))
 
 
 
@@ -224,7 +236,6 @@ def main():
                         alpha=0.5)
         plt.legend(["true values", "predictions", "ci"])
         plt.show()
-    print(predictions.shape)
 
 
 if __name__ == "__main__":

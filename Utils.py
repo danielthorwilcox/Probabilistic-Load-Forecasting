@@ -5,7 +5,7 @@ import yaml
 from os.path import join
 
 
-networkpath = "./results/network44"
+networkpath = "./results/fl_network2"
 
 def getXypairs(data, train_period, pred_period):
     if 'dt_iso' in data:

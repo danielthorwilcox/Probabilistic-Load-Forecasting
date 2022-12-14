@@ -1,0 +1,12 @@
+parameters:
+  batch_size: 128
+  dropout: 0.2
+  layer_dim: 3
+  hidden_dim: 40
+  n_fc_layers: 1
+  learning_rate: 0.001
+  n_epochs: 25
+  pred_period: 24
+  train_period: 164
+  weight_decay: 0.0
+  model: "lstm"
