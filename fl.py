@@ -100,8 +100,8 @@ class Client:
 
 def main():
     start = time.time()
-    networkpath = "./results/network25"
-    full_dataset = pd.read_csv("demand_generation/final_features_normalized.csv")
+    networkpath = "./results/network48bayesFL"
+    full_dataset = pd.read_csv("demand_generation/timeseries.csv")
     params = Utils.get_model_params(networkpath)
     type_of_model = params['model'] # 'bayesian_lstm' or 'lstm'
     ##=========================================================================
@@ -120,7 +120,7 @@ def main():
 
     ## FL settings
     num_clients = 3
-    epochs_per_client = 4
+    epochs_per_client = 10
     rounds = 4
     test_size = 0.2
     train_dataset = full_dataset.copy()[int(full_dataset.shape[0]*0):int(full_dataset.shape[0]*(1-test_size))]
@@ -179,10 +179,13 @@ def main():
     r2 = r2_score(predictions_mean.flatten(), true_values.flatten())
     ## =============================================
     ## Save values to a file
+    '''
     with open(join(networkpath, 'bayseian_predictions_1.pickle'), 'wb') as handle:
         pickle.dump(predictions, handle, protocol=pickle.HIGHEST_PROTOCOL)
     with open('bayesian_values_1.pickle', 'wb') as handle:
         pickle.dump(true_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    '''
+    torch.save(global_model, join(networkpath, "model"))
     ## ===================================================================
     end = time.time()
     print('Time for evaluate: '+ str(end-midtime))

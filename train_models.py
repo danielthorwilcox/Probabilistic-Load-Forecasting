@@ -69,7 +69,7 @@ opt.plot_losses()
 
 # save some metrics to disc
 opt.save_losses(filepath=Utils.networkpath)
-torch.save(model, join(networkpath,"model"))
+torch.save(model, join(networkpath, "model"))
 
 predictions, true_values = opt.evaluate(test_loader_one, model_name, batch_size=1, n_features=input_dim)
 predictions_mean = np.mean(predictions, axis=1)  # mean of the bayesian outputs, if non-bayesian it has no effect
